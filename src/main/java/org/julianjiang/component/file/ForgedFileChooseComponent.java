@@ -1,6 +1,6 @@
 package org.julianjiang.component.file;
 
-import org.julianjiang.component.menu.CustomFileChooser;
+import javafx.stage.FileChooser;
 
 import javax.swing.*;
 import java.awt.*;
@@ -27,15 +27,9 @@ public class ForgedFileChooseComponent {
 
         final JButton button = new JButton();
         button.addActionListener(e -> {
-            CustomFileChooser fileChooser = new CustomFileChooser();
-            int height = (int) (fileWidth * 0.5);
-            fileChooser.setPreferredSize(new Dimension(fileWidth, height));
-            int returnValue = fileChooser.showOpenDialog(null);
-            if (returnValue == JFileChooser.APPROVE_OPTION) {
-                File selectedFile = fileChooser.getSelectedFile();
-                String fileName = selectedFile.getName();
-                jTextField.setText(fileName);
-            }
+            FileChooser fileChooser = new FileChooser();
+            fileChooser.setTitle("Choose File");
+            fileChooser.setInitialDirectory(new File(System.getProperty("user.home")));
         });
         button.setText("请选择...");
         button.setFont(font);
