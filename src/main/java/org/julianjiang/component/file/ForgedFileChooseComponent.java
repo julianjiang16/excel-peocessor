@@ -1,5 +1,7 @@
 package org.julianjiang.component.file;
 
+import org.julianjiang.component.menu.CustomFileChooser;
+
 import javax.swing.*;
 import java.awt.*;
 import java.io.File;
@@ -25,8 +27,7 @@ public class ForgedFileChooseComponent {
 
         final JButton button = new JButton();
         button.addActionListener(e -> {
-            JFileChooser fileChooser = new JFileChooser();
-            fileChooser.setFont(font);
+            CustomFileChooser fileChooser = new CustomFileChooser();
             int height = (int) (fileWidth * 0.5);
             fileChooser.setPreferredSize(new Dimension(fileWidth, height));
             int returnValue = fileChooser.showOpenDialog(null);

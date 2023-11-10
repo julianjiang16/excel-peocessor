@@ -13,6 +13,8 @@ public class MainFrame extends JFrame {
     private JButton exitButton;
 
     public MainFrame() {
+        Font font = new Font("宋体", Font.BOLD, 31);
+        UIManager.put("FileChooser.font", font); // 设置JFileChooser的字体
         // 设置窗口标题
         setTitle("excel加工");
         // 获取屏幕大小
@@ -26,7 +28,6 @@ public class MainFrame extends JFrame {
         setLocationRelativeTo(null);
         // 设置关闭窗口时退出程序
         setDefaultCloseOperation(EXIT_ON_CLOSE);
-        Font font = new Font("宋体", Font.BOLD, 30);
         final ArrayList<String> templates = Lists.newArrayList("模板1", "模板2");
         JComboBoxFactory comboBoxFactory = new JComboBoxFactory(font, width, height);
         final JPanel selectPanel = comboBoxFactory.buildComboBoxPanel("请选择出库模板：", templates);
