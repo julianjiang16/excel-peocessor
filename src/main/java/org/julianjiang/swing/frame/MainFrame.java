@@ -1,8 +1,8 @@
-package org.julianjiang.frame;
+package org.julianjiang.swing.frame;
 
 import com.google.common.collect.Lists;
-import org.julianjiang.component.file.ForgedFileChooseComponent;
-import org.julianjiang.component.menu.JComboBoxFactory;
+import org.julianjiang.swing.component.file.ForgedFileChooseComponent;
+import org.julianjiang.swing.component.menu.JComboBoxFactory;
 
 import javax.swing.*;
 import java.awt.*;

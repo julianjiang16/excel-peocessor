@@ -1,4 +1,4 @@
-package org.julianjiang.component.file;
+package org.julianjiang.swing.component.file;
 
 import javax.swing.*;
 import java.awt.*;

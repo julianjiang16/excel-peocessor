@@ -1,4 +1,4 @@
-package org.julianjiang.component.button;
+package org.julianjiang.swing.component.button;
 
 import javax.swing.*;
 import java.awt.*;
