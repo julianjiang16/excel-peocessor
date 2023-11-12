@@ -40,6 +40,7 @@ public class ComboBoxFactory {
 
         ListView<String> listView = new ListView<>();
         listView.setPrefWidth(300);
+        listView.setPrefHeight(300);
         listView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
         ObservableList<String> items = FXCollections.observableArrayList();
         listView.setItems(items);

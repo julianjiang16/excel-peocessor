@@ -21,6 +21,7 @@ public class JavafxExcelProcessorWindow extends Application {
     @Override
     public void start(Stage primaryStage) {
 
+        Context context = new Context();
         Font font = new Font("宋体", 22);
 
         BorderPane root = new CustomBorderPane();
@@ -43,24 +44,33 @@ public class JavafxExcelProcessorWindow extends Application {
         // 创建按钮
         Label fileLabel = new Label("请选择明细数据文件：");
         FileChooserFactory fileChooserFactory = new FileChooserFactory(font, fileLabel);
-        HBox hboxFile = fileChooserFactory.buildFileChooser(primaryStage, typeCombo);
+        HBox hboxFile = fileChooserFactory.buildFileChooser(primaryStage, typeCombo, context, false);
 
         Label tempFileLabel = new Label("请选择输出模板文件：");
         FileChooserFactory tempFileChooserFactory = new FileChooserFactory(font, tempFileLabel);
-        HBox templateBox = tempFileChooserFactory.buildFileChooser(primaryStage, null);
+        HBox templateBox = tempFileChooserFactory.buildFileChooser(primaryStage, null, context, false);
+
+
+        Label outputFileLabel = new Label("请选择输出文件夹：");
+        FileChooserFactory outputFileChooserFactory = new FileChooserFactory(font, outputFileLabel);
+        HBox outputFBox = outputFileChooserFactory.buildFileChooser(primaryStage, null, context, true);
 
 
         Label radioLabel = new Label("是否需要分类汇总（一级分类）：");
         RadioComponent radioComponent = new RadioComponent(font, radioLabel);
-        HBox hBox = radioComponent.buildRadio();
+        HBox radioBox = radioComponent.buildRadio();
+
+        InputComponent inputComponent = new InputComponent(font);
+        HBox noticeBox = inputComponent.buildInput(context);
+
 
         ButtonComponent buttonComponent = new ButtonComponent();
-        HBox buttonBox = buttonComponent.buildButtonBox(typeCombo);
+        HBox buttonBox = buttonComponent.buildButtonBox(typeCombo, context);
 
         // 创建垂直布局
         VBox vbox = new VBox(10);
         // 主屏幕
-        vbox.getChildren().addAll(hboxFile, typeComboBox, templateBox, hBox);
+        vbox.getChildren().addAll(hboxFile, typeComboBox, templateBox, outputFBox, radioBox, noticeBox);
 
         // 将垂直布局放置在主界面的中心
         root.setCenter(vbox);

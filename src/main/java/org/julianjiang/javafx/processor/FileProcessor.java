@@ -30,25 +30,8 @@ public class FileProcessor {
 
             for (int columnIndex = 0; columnIndex < columnCount; columnIndex++) {
                 Cell currentCell = currentRow.getCell(columnIndex);
-                Object cellValue = "";
                 String header = headerRow.getCell(columnIndex).getStringCellValue();
-                if (currentCell != null) {
-                    CellType cellType = currentCell.getCellType();
-                    switch (cellType) {
-                        case STRING:
-                            cellValue = currentCell.getStringCellValue();
-                            break;
-                        case NUMERIC:
-                            cellValue = currentCell.getNumericCellValue();
-                            break;
-                        case BOOLEAN:
-                            cellValue = currentCell.getBooleanCellValue();
-                            break;
-                        case BLANK:
-                            cellValue = "";
-                            break;
-                    }
-                }
+                Object cellValue = ExcelProcessor.getCellValue(currentCell);
 
                 rowData.put(header, cellValue);
             }
