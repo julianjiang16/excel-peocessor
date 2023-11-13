@@ -25,7 +25,7 @@ public class ExcelProcessor {
         if (CollectionUtils.isEmpty(context.getAllocation())) {
             return Pair.create("未选择分单条件 !!!", false);
         }
-        if (Objects.isNull(context.getTemplateFile())) {
+        if (Objects.isNull(context.getExcelTemplate().getTemplateFile())) {
             return Pair.create("未选择输出模板文件 !!!", false);
         }
         if (StringUtils.isBlank(context.getOutputPath())) {
@@ -39,7 +39,7 @@ public class ExcelProcessor {
     public static void outputExcel(Context context) throws IOException, InvalidFormatException {
 
         // 输出excel
-        Pair<List<Cell>, List<Cell>> preLastCell = extractRowsFromExcel(context.getTemplateFile(), context.getPreRows(), context.getLastRows());
+        Pair<List<Cell>, List<Cell>> preLastCell = extractRowsFromExcel(context.getExcelTemplate().getTemplateFile(), context.getPreRows(), context.getLastRows());
         // 分单数据
         Map<String, List<Map<String, Object>>> groupData = groupDataByAllocation(context.getData(), context.getAllocation());
         Alert alert = AlertComponent.buildAlert("处理中...", "有" + groupData.keySet().size() + "个文件需要生成，请耐心等待...");
@@ -48,7 +48,7 @@ public class ExcelProcessor {
 //            writeExcel(entity.getKey(), entity.getValue(), preLastCell, context);
             String fileExtension = ".xlsx"; // 文件后缀
             String filePath = Paths.get(context.getOutputPath(), entity.getKey() + fileExtension).toString();
-            ExcelUtils.copyFile(context.getTemplateFile(), context.getPreRows(), context.getLastRows(), new File(filePath), entity.getValue());
+            ExcelUtils.copyFile(context.getExcelTemplate().getTemplateFile(), context.getPreRows(), context.getLastRows(), new File(filePath), entity.getValue());
             // 先生成1个文件
             break;
         }
@@ -63,7 +63,7 @@ public class ExcelProcessor {
         Sheet outputSheet = outputWorkbook.createSheet("Sheet1");
         // 写入前N行cell
 
-        Workbook workbook = new XSSFWorkbook(new FileInputStream(context.getTemplateFile()));
+        Workbook workbook = new XSSFWorkbook(new FileInputStream(context.getExcelTemplate().getTemplateFile()));
         Sheet sheet = workbook.getSheetAt(0);
         List<Cell> preRowCells = preLastCell.getKey();
         for (int i = 0; i < preRowCells.size(); i++) {

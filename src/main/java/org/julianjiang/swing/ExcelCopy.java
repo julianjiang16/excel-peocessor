@@ -10,8 +10,8 @@ import java.io.IOException;
 
 public class ExcelCopy {
     public static void main(String[] args) throws IOException {
-        FileInputStream fis = new FileInputStream("C:\\Users\\Administrator\\Desktop\\模板.xlsx");
-        FileOutputStream out = new FileOutputStream("C:\\Users\\Administrator\\Desktop\\试一试3.xlsx");
+        FileInputStream fis = new FileInputStream("E:\\data\\excel-test\\template.xlsx");
+        FileOutputStream out = new FileOutputStream("E:\\data\\excel-test\\template1.xlsx");
         Workbook srcWorkbook = new XSSFWorkbook(fis);
         Sheet srcSheet = srcWorkbook.getSheetAt(0);
         Workbook destWorkbook = new XSSFWorkbook();
@@ -41,8 +41,24 @@ public class ExcelCopy {
     }
 
     private static void copyCellStyle(Workbook srcWorkbook, CellStyle sourceStyle, CellStyle targetStyle) {
-        targetStyle.cloneStyleFrom(sourceStyle);
+        targetStyle.setAlignment(sourceStyle.getAlignment());
+        targetStyle.setVerticalAlignment(sourceStyle.getVerticalAlignment());
+        targetStyle.setDataFormat(sourceStyle.getDataFormat());
+
         targetStyle.setFont(cloneFont(srcWorkbook, sourceStyle.getFontIndex()));
+
+        targetStyle.setFillForegroundColor(sourceStyle.getFillForegroundColor());
+        targetStyle.setFillBackgroundColor(sourceStyle.getFillBackgroundColor());
+        targetStyle.setFillPattern(sourceStyle.getFillPattern());
+        targetStyle.setBorderTop(sourceStyle.getBorderTop());
+        targetStyle.setBorderBottom(sourceStyle.getBorderBottom());
+        targetStyle.setBorderLeft(sourceStyle.getBorderLeft());
+        targetStyle.setBorderRight(sourceStyle.getBorderRight());
+        targetStyle.setWrapText(sourceStyle.getWrapText());
+        targetStyle.setRotation(sourceStyle.getRotation());
+        targetStyle.setIndention(sourceStyle.getIndention());
+        targetStyle.setLocked(sourceStyle.getLocked());
+        targetStyle.setHidden(sourceStyle.getHidden());
     }
 
     private static Font cloneFont(Workbook srcWorkbook, int sourceFontIndex) {

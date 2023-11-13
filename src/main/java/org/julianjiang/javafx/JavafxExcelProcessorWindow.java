@@ -15,17 +15,19 @@ import javafx.stage.Screen;
 import javafx.stage.Stage;
 import org.apache.commons.math3.util.Pair;
 import org.julianjiang.javafx.component.*;
+import org.julianjiang.javafx.model.ExcelTemplate;
 
 public class JavafxExcelProcessorWindow extends Application {
 
     @Override
     public void start(Stage primaryStage) {
 
-        Context context = new Context();
-        Font font = new Font("宋体", 22);
+        Context context = new Context(new ExcelTemplate());
+        String stringTemplate = "-fx-font: 14px \"%s\"; -fx-font-weight: bold;";
+        Font font = new Font("宋体", 14);
 
         BorderPane root = new CustomBorderPane();
-        root.setPadding(new Insets(10));
+        root.setPadding(new Insets(5));
         // 获取屏幕大小
         Screen screen = Screen.getPrimary();
         Rectangle2D bounds = screen.getVisualBounds();
@@ -36,28 +38,28 @@ public class JavafxExcelProcessorWindow extends Application {
 
 
         Label typeLabel = new Label("请选择分单条件：");
-        ComboBoxFactory comboBoxFactory = new ComboBoxFactory(font, typeLabel);
+        ComboBoxFactory comboBoxFactory = new ComboBoxFactory(font, typeLabel, stringTemplate);
         Pair typePair = comboBoxFactory.buildComboBox(Lists.newArrayList());
         HBox typeComboBox = (HBox) typePair.getFirst();
 
         ListView typeCombo = (ListView) typePair.getSecond();
         // 创建按钮
         Label fileLabel = new Label("请选择明细数据文件：");
-        FileChooserFactory fileChooserFactory = new FileChooserFactory(font, fileLabel);
+        FileChooserFactory fileChooserFactory = new FileChooserFactory(font, fileLabel, stringTemplate);
         HBox hboxFile = fileChooserFactory.buildFileChooser(primaryStage, typeCombo, context, false);
 
         Label tempFileLabel = new Label("请选择输出模板文件：");
-        FileChooserFactory tempFileChooserFactory = new FileChooserFactory(font, tempFileLabel);
+        FileChooserFactory tempFileChooserFactory = new FileChooserFactory(font, tempFileLabel, stringTemplate);
         HBox templateBox = tempFileChooserFactory.buildFileChooser(primaryStage, null, context, false);
 
 
         Label outputFileLabel = new Label("请选择输出文件夹：");
-        FileChooserFactory outputFileChooserFactory = new FileChooserFactory(font, outputFileLabel);
+        FileChooserFactory outputFileChooserFactory = new FileChooserFactory(font, outputFileLabel, stringTemplate);
         HBox outputFBox = outputFileChooserFactory.buildFileChooser(primaryStage, null, context, true);
 
 
         Label radioLabel = new Label("是否需要分类汇总（一级分类）：");
-        RadioComponent radioComponent = new RadioComponent(font, radioLabel);
+        RadioComponent radioComponent = new RadioComponent(font, radioLabel, stringTemplate);
         HBox radioBox = radioComponent.buildRadio();
 
         InputComponent inputComponent = new InputComponent(font);

@@ -12,9 +12,9 @@ import java.util.List;
 
 public class ExcelCopy {
     public static void main(String[] args) throws IOException {
-        FileInputStream fis = new FileInputStream("C:\\Users\\Administrator\\Desktop\\模板.xlsx");
+        FileInputStream fis = new FileInputStream("E:\\data\\excel-test\\template.xlsx");
 
-        FileOutputStream out = new FileOutputStream("C:\\Users\\Administrator\\Desktop\\试一试3.xlsx");
+        FileOutputStream out = new FileOutputStream("E:\\data\\excel-test\\template1.xlsx");
         Workbook srcWorkbook = new XSSFWorkbook(fis);
         Sheet srcSheet = srcWorkbook.getSheetAt(0);
 
@@ -32,12 +32,12 @@ public class ExcelCopy {
     }
 
     private static void copySheet(Sheet srcSheet, Sheet destSheet, Workbook srcWorkbook, Workbook destWorkbook) {
-        copyMergedRegions(srcSheet, destSheet);
         for (int i = srcSheet.getLastRowNum(); i >= 0; i--) {
             Row srcRow = srcSheet.getRow(i);
             Row destRow = destSheet.createRow(i);
             copyRow(srcRow, destRow, srcWorkbook, destWorkbook);
         }
+        copyMergedRegions(srcSheet, destSheet);
     }
 
     private static void copyMergedRegions(Sheet srcSheet, Sheet destSheet) {
@@ -117,6 +117,8 @@ public class ExcelCopy {
         destRow.setHeight(srcRow.getHeight());
         for (int j = 0; j < lastCellNum; j++) {
             Cell srcCell = srcRow.getCell(j);
+            if (srcCell == null)
+                continue;
 
             // 获取当前样式信息，并确保样式属于目标工作簿
             CellStyle style = destWorkbook.createCellStyle();

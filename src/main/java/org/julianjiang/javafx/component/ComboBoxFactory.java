@@ -20,9 +20,8 @@ public class ComboBoxFactory {
     String fontTemplate;
     Label label;
 
-    public ComboBoxFactory(Font font, Label label) {
+    public ComboBoxFactory(Font font, Label label,String fontTemplate) {
         this.font = font;
-        String fontTemplate = "-fx-font: 18px \"%s\"; -fx-font-weight: bold;";
         this.fontTemplate = String.format(fontTemplate, font.getName());
         this.label = label;
         this.label.setStyle(fontTemplate);

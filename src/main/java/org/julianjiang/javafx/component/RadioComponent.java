@@ -12,9 +12,8 @@ public class RadioComponent {
     String fontTemplate;
     Label label;
 
-    public RadioComponent(Font font, Label label) {
+    public RadioComponent(Font font, Label label,String fontTemplate) {
         this.font = font;
-        String fontTemplate = "-fx-font: 18px \"%s\"; -fx-font-weight: bold;";
         this.fontTemplate = String.format(fontTemplate, font.getName());
         this.label = label;
         this.label.setStyle(fontTemplate);

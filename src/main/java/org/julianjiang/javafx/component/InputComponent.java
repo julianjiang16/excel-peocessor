@@ -24,8 +24,8 @@ public class InputComponent {
         hBox.setSpacing(10); // 设置组件间距
 
 
-        Label noticeLabel = new Label("注意：");
-        String fontTemplate = "-fx-font: 18px \"%s\"; -fx-font-weight: bold; -fx-text-fill: red;";
+        Label noticeLabel = new Label("注意*：");
+        String fontTemplate = "-fx-font: 14px \"%s\"; -fx-font-weight: bold; -fx-text-fill: red;";
         noticeLabel.setStyle(fontTemplate);
 
         Label label1 = new Label();
@@ -45,8 +45,7 @@ public class InputComponent {
         // 创建一个TextFormatter，并将过滤器应用于其中
         TextFormatter<String> textFormatter = new TextFormatter<>(integerFilter);
         textField.setTextFormatter(textFormatter);
-
-
+        textField.setMaxHeight(30);
         textField.setText("0");
         textField.setPrefWidth(150);
         Label label2 = new Label();
@@ -55,6 +54,7 @@ public class InputComponent {
 
         TextField textField2 = new TextField();
         textField2.setPrefWidth(150);
+        textField2.setMaxHeight(30);
         textField2.setText("0");
         TextFormatter<String> textFormatter2 = new TextFormatter<>(integerFilter);
         textField2.setTextFormatter(textFormatter2);
@@ -64,8 +64,8 @@ public class InputComponent {
         label3.setFont(font);
         hBox.getChildren().addAll(noticeLabel, label1, textField, label2, textField2, label3);
 
-        context.setPreText(textField);
-        context.setLastText(textField2);
+        context.getExcelTemplate().setPreText(textField);
+        context.getExcelTemplate().setLastText(textField2);
         return hBox;
     }
 }

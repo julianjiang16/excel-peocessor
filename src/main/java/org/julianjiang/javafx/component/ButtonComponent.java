@@ -20,9 +20,9 @@ public class ButtonComponent {
     public HBox buildButtonBox(ListView listView, Context context) {
         HBox hBox = new HBox();
         hBox.setAlignment(Pos.CENTER);
-        hBox.setPadding(new Insets(10, 0, 30, 20)); // 设置左边距
+        hBox.setPadding(new Insets(30, 0, 30, 20)); // 设置左边距
         hBox.setSpacing(100); // 设置组件间距
-        Font f = Font.font("Arial", 30);
+        Font f = Font.font("Arial", 20);
         Button process = new Button();
         process.setText("执行");
         process.setFont(f);
@@ -40,8 +40,8 @@ public class ButtonComponent {
             });
 
             // 设置模板前后保留行
-            context.setPreRows(Integer.valueOf(context.getPreText().getText()));
-            context.setLastRows(Integer.valueOf(context.getLastText().getText()));
+            context.getExcelTemplate().setPreRows(Integer.valueOf(context.getExcelTemplate().getPreText().getText()));
+            context.getExcelTemplate().setLastRows(Integer.valueOf(context.getExcelTemplate().getLastText().getText()));
 
             // 首先校验
             Pair<String, Boolean> validatePair = ExcelProcessor.validate(context);

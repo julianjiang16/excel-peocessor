@@ -7,6 +7,7 @@ import javafx.scene.text.Font;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.math3.util.Pair;
 import org.julianjiang.javafx.Context;
 import org.julianjiang.javafx.processor.FileProcessor;
@@ -26,9 +27,8 @@ public class FileChooserFactory {
     String fontTemplate;
     Label label;
 
-    public FileChooserFactory(Font font, Label label) {
+    public FileChooserFactory(Font font, Label label,String fontTemplate) {
         this.font = font;
-        String fontTemplate = "-fx-font: 18px \"%s\"; -fx-font-weight: bold;";
         this.fontTemplate = String.format(fontTemplate, font.getName());
         this.label = label;
         this.label.setStyle(fontTemplate);
@@ -66,11 +66,16 @@ public class FileChooserFactory {
 
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Choose File");
-        fileChooser.setInitialDirectory(new File(System.getProperty("user.home")));
+        if (StringUtils.isNotBlank(context.getLastFilePath())) {
+            fileChooser.setInitialDirectory(new File(context.getLastFilePath()));
+        } else {
+            fileChooser.setInitialDirectory(new File(System.getProperty("user.home")));
+        }
         FileChooser.ExtensionFilter excelFilter = new FileChooser.ExtensionFilter("excel文件 (*.xls, *.xlsx)", "*.xls", "*.xlsx");
         fileChooser.getExtensionFilters().add(excelFilter);
         File selectedFile = fileChooser.showOpenDialog(primaryStage);
         if (selectedFile != null) {
+            context.setLastFilePath(selectedFile.getParent());
             Alert alert = AlertComponent.buildAlert("请稍等...", "程序正在处理，请稍等...");
             InputStream inputStream = null;
             try {
@@ -83,7 +88,7 @@ public class FileChooserFactory {
                     comboBox.getSelectionModel().select(0);
                     context.setData(dataPair.getSecond());
                 } else {
-                    context.setTemplateFile(selectedFile);
+                    context.getExcelTemplate().setTemplateFile(selectedFile);
                 }
                 textField.setText(selectedFile.getName());
             } catch (Exception ex) {
@@ -107,8 +112,14 @@ public class FileChooserFactory {
         DirectoryChooser directoryChooser = new DirectoryChooser();
         directoryChooser.setTitle("选择文件夹");
 
+        if (StringUtils.isNotBlank(context.getLastFilePath())) {
+            directoryChooser.setInitialDirectory(new File(context.getLastFilePath()));
+        } else {
+            directoryChooser.setInitialDirectory(new File(System.getProperty("user.home")));
+        }
         File selectedDirectory = directoryChooser.showDialog(primaryStage);
         if (selectedDirectory != null) {
+            context.setLastFilePath(selectedDirectory.getParent());
             context.setOutputPath(selectedDirectory.getAbsolutePath());
             textField.setText(selectedDirectory.getAbsolutePath());
         }
