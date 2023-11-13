@@ -60,10 +60,10 @@ public class JavafxExcelProcessorWindow extends Application {
 
         Label radioLabel = new Label("是否需要分类汇总（一级分类）：");
         RadioComponent radioComponent = new RadioComponent(font, radioLabel, stringTemplate);
-        HBox radioBox = radioComponent.buildRadio();
+        HBox radioBox = radioComponent.buildRadio(context);
 
         InputComponent inputComponent = new InputComponent(font);
-        HBox noticeBox = inputComponent.buildInput(context);
+        VBox noticeBox = inputComponent.buildInput(context);
 
 
         ButtonComponent buttonComponent = new ButtonComponent();

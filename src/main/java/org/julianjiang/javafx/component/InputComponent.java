@@ -5,6 +5,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextFormatter;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
 import org.julianjiang.javafx.Context;
 
@@ -18,10 +19,16 @@ public class InputComponent {
         this.font = font;
     }
 
-    public HBox buildInput(Context context) {
-        HBox hBox = new HBox();
-        hBox.setPadding(new Insets(30, 0, 0, 20)); // 设置左边距
-        hBox.setSpacing(10); // 设置组件间距
+    public VBox buildInput(Context context) {
+        final VBox vBox = new VBox();
+
+        HBox noticeHBox = new HBox();
+        noticeHBox.setPadding(new Insets(30, 0, 0, 20)); // 设置左边距
+        noticeHBox.setSpacing(10); // 设置组件间距
+
+        HBox titleHBox = new HBox();
+        titleHBox.setPadding(new Insets(30, 0, 0, 75)); // 设置左边距
+        titleHBox.setSpacing(10); // 设置组件间距
 
 
         Label noticeLabel = new Label("注意*：");
@@ -45,16 +52,16 @@ public class InputComponent {
         // 创建一个TextFormatter，并将过滤器应用于其中
         TextFormatter<String> textFormatter = new TextFormatter<>(integerFilter);
         textField.setTextFormatter(textFormatter);
-        textField.setMaxHeight(30);
         textField.setText("0");
-        textField.setPrefWidth(150);
+        textField.setPrefWidth(60);
+        textField.setFont(font);
         Label label2 = new Label();
         label2.setText("行，并且保留模板后");
         label2.setFont(font);
 
         TextField textField2 = new TextField();
-        textField2.setPrefWidth(150);
-        textField2.setMaxHeight(30);
+        textField2.setPrefWidth(60);
+        textField2.setFont(font);
         textField2.setText("0");
         TextFormatter<String> textFormatter2 = new TextFormatter<>(integerFilter);
         textField2.setTextFormatter(textFormatter2);
@@ -62,10 +69,41 @@ public class InputComponent {
         Label label3 = new Label();
         label3.setText("行！");
         label3.setFont(font);
-        hBox.getChildren().addAll(noticeLabel, label1, textField, label2, textField2, label3);
+        noticeHBox.getChildren().addAll(noticeLabel, label1, textField, label2, textField2, label3);
 
         context.getExcelTemplate().setPreText(textField);
         context.getExcelTemplate().setLastText(textField2);
-        return hBox;
+
+        // 选择的模板文件中，列名处于第 N 行。  分类汇总行（样式）处于第 N 行；
+
+        final Label titleLabel = new Label("选择的模板文件中，列名处于第");
+        titleLabel.setFont(font);
+
+        final TextField titleTextField = new TextField("0");
+        titleTextField.setFont(font);
+
+        TextFormatter<String> titleTextFormatter = new TextFormatter<>(integerFilter);
+        titleTextField.setPrefWidth(60);
+        titleTextField.setTextFormatter(titleTextFormatter);
+
+        final Label titleRowLabel = new Label("行(必填)，分类汇总行（样式）处于第");
+        titleRowLabel.setFont(font);
+
+        final TextField typeTextField = new TextField("0");
+        typeTextField.setFont(font);
+        typeTextField.setPrefWidth(60);
+        TextFormatter<String> typeTextFormatter = new TextFormatter<>(integerFilter);
+        typeTextField.setTextFormatter(typeTextFormatter);
+
+        final Label typeRowLabel = new Label("行(非必填)。 ");
+        typeRowLabel.setFont(font);
+
+
+        context.getExcelTemplate().setTitleText(titleTextField);
+        context.getExcelTemplate().setTypeText(typeTextField);
+
+        titleHBox.getChildren().addAll(titleLabel, titleTextField, titleRowLabel, typeTextField, typeRowLabel);
+        vBox.getChildren().addAll(noticeHBox, titleHBox);
+        return vBox;
     }
 }

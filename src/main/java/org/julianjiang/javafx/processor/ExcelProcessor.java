@@ -1,6 +1,7 @@
 package org.julianjiang.javafx.processor;
 
 import javafx.scene.control.Alert;
+import javafx.scene.control.TextField;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.math3.util.Pair;
@@ -32,6 +33,33 @@ public class ExcelProcessor {
             return Pair.create("未选择输出文件夹 !!!", false);
         }
 
+        /** 列名行号校验 */
+        final TextField titleText = context.getExcelTemplate().getTitleText();
+        final String title = titleText.getText();
+        try {
+            final Integer titleRow = Integer.valueOf(title);
+            if (titleRow < 1) {
+                return Pair.create("列名所处行号必须大于0 !!!", false);
+            }
+        } catch (Exception e) {
+            return Pair.create("列名所处行号必填 !!!", false);
+        }
+
+        /** 如果选择分类，则分类汇总行所处行号必填！！ */
+        if (context.isTypeFlag()) {
+            final TextField typeText = context.getExcelTemplate().getTypeText();
+            final String type = typeText.getText();
+            try {
+                final Integer typeRow = Integer.valueOf(type);
+                if (typeRow < 1) {
+                    return Pair.create("分类汇总行所处行号必须大于0 !!!", false);
+                }
+            } catch (Exception e) {
+                return Pair.create("分类汇总行所处行号必填 !!!", false);
+            }
+
+        }
+
         return Pair.create("", true);
     }
 
@@ -39,7 +67,7 @@ public class ExcelProcessor {
     public static void outputExcel(Context context) throws IOException, InvalidFormatException {
 
         // 输出excel
-        Pair<List<Cell>, List<Cell>> preLastCell = extractRowsFromExcel(context.getExcelTemplate().getTemplateFile(), context.getPreRows(), context.getLastRows());
+        Pair<List<Cell>, List<Cell>> preLastCell = extractRowsFromExcel(context.getExcelTemplate().getTemplateFile(), context.getExcelTemplate().getPreRows(), context.getExcelTemplate().getLastRows());
         // 分单数据
         Map<String, List<Map<String, Object>>> groupData = groupDataByAllocation(context.getData(), context.getAllocation());
         Alert alert = AlertComponent.buildAlert("处理中...", "有" + groupData.keySet().size() + "个文件需要生成，请耐心等待...");
@@ -48,7 +76,7 @@ public class ExcelProcessor {
 //            writeExcel(entity.getKey(), entity.getValue(), preLastCell, context);
             String fileExtension = ".xlsx"; // 文件后缀
             String filePath = Paths.get(context.getOutputPath(), entity.getKey() + fileExtension).toString();
-            ExcelUtils.copyFile(context.getExcelTemplate().getTemplateFile(), context.getPreRows(), context.getLastRows(), new File(filePath), entity.getValue());
+            ExcelUtils.copyFile(context.getExcelTemplate().getTemplateFile(), context.getExcelTemplate().getPreRows(), context.getExcelTemplate().getLastRows(), new File(filePath), entity.getValue());
             // 先生成1个文件
             break;
         }

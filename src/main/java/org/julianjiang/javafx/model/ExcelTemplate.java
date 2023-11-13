@@ -16,7 +16,6 @@ public class ExcelTemplate {
 
     // 列名所处的行号
     TextField titleText;
-
     // 如果选择了需要分类，则需要填写分类行样式的行号
     TextField typeText;
 
