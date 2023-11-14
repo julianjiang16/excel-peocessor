@@ -1,104 +1,225 @@
 package org.julianjiang.javafx.utils;
 
-import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
-import org.apache.poi.ss.usermodel.*;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import org.apache.commons.lang3.tuple.Triple;
+import org.apache.commons.math3.util.Pair;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.ClientAnchor;
+import org.apache.poi.ss.usermodel.CreationHelper;
+import org.apache.poi.ss.usermodel.Drawing;
+import org.apache.poi.ss.usermodel.Font;
+import org.apache.poi.ss.usermodel.Picture;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.julianjiang.javafx.processor.ExcelProcessor;
 
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class ExcelUtils {
 
-    public static void copyFile(File templateFile, int preRows, int lastRows, File outputFile, List<Map<String, Object>> data) throws IOException, InvalidFormatException {
-        Workbook workbook = new XSSFWorkbook(templateFile);
+    // 指定范围合并样式应用
+    public static void copyMergedCellStyles(Sheet srcSheet, Sheet destSheet, int srcRowIndex, int destRowIndex, int rows) {
+        for (int i = 0; i < srcSheet.getNumMergedRegions(); i++) {
+            CellRangeAddress mergedRegion = srcSheet.getMergedRegion(i);
+            int mergedRegionFirstRow = mergedRegion.getFirstRow();
+            int mergedRegionLastRow = mergedRegion.getLastRow();
+
+            if (mergedRegionFirstRow >= srcRowIndex && mergedRegionFirstRow < srcRowIndex + rows) {
+                int destRegionFirstRow = destRowIndex + (mergedRegionFirstRow - srcRowIndex);
+                int destRegionLastRow = destRegionFirstRow + (mergedRegionLastRow - mergedRegionFirstRow);
+
+                CellRangeAddress destRegion = new CellRangeAddress(destRegionFirstRow, destRegionLastRow,
+                        mergedRegion.getFirstColumn(), mergedRegion.getLastColumn());
+                destSheet.addMergedRegion(destRegion);
+            }
+        }
+    }
+
+
+    public static void extraPic(Sheet inputSheet, Sheet outSheet, Workbook outWorkbook) {
+        Drawing<?> drawing = inputSheet.getDrawingPatriarch();
+        // 遍历所有的图形对象
+        Set<String> copiedPictures = new HashSet<>();
+        final HashMap<String, Triple<Integer, Integer, Picture>> keyRowCol = Maps.newHashMap();
+        for (Object obj : drawing) {
+            if (obj instanceof Picture) {
+                Picture picture = (Picture) obj;
+                ClientAnchor anchor = picture.getClientAnchor();
+                int row = anchor.getRow1();
+                int col = anchor.getCol1();
+                byte[] data = picture.getPictureData().getData();
+                String pictureDataKey = new String(data);
+                if (copiedPictures.contains(pictureDataKey)) {
+                    // 元素相同则判断 起始位置
+                    final Triple<Integer, Integer, Picture> triple = keyRowCol.get(pictureDataKey);
+                    if (triple.getLeft().compareTo(row) > 0) {
+                        keyRowCol.put(pictureDataKey, Triple.of(row, col, picture));
+                    }
+                    continue;
+                }
+                copiedPictures.add(pictureDataKey);
+                keyRowCol.put(pictureDataKey, Triple.of(row, col, picture));
+            }
+        }
+
+        keyRowCol.values().forEach(item -> {
+            addPic(outSheet, outWorkbook, item.getRight().getPictureData().getData(), item.getLeft(), item.getMiddle());
+        });
+
+    }
+
+    public static void addPic(Sheet sheet, Workbook workbook, byte[] imageBytes, int row, int col) {
+        int pictureIdx = workbook.addPicture(imageBytes, Workbook.PICTURE_TYPE_JPEG);
+        CreationHelper helper = workbook.getCreationHelper();
+        Drawing<?> drawing = sheet.createDrawingPatriarch();
+
+        ClientAnchor anchor = helper.createClientAnchor();
+        anchor.setCol1(col); // 图片起始列
+        anchor.setRow1(row); // 图片起始行
+
+        // 插入图片
+        Picture picture = drawing.createPicture(anchor, pictureIdx);
+        picture.resize(); // 自适应图片大小
+    }
+
+
+    public static void setCellValue(Cell srcCell, Cell destCell) {
+        switch (srcCell.getCellType()) {
+            case STRING:
+                destCell.setCellValue(srcCell.getStringCellValue());
+                break;
+            case NUMERIC:
+                destCell.setCellValue(srcCell.getNumericCellValue());
+                break;
+            case BOOLEAN:
+                destCell.setCellValue(srcCell.getBooleanCellValue());
+                break;
+            case BLANK:
+                destCell.setBlank();
+                break;
+            case FORMULA:
+                destCell.setCellFormula(srcCell.getCellFormula());
+                break;
+            default:
+                break;
+        }
+    }
+
+    public static CellStyle getCopyCellStyle(CellStyle sourceStyle, Workbook sourceWorkbook, Workbook destinationWorkbook) {
+        CellStyle destinationStyle = destinationWorkbook.createCellStyle();
+        destinationStyle.setAlignment(sourceStyle.getAlignment());
+        destinationStyle.setVerticalAlignment(sourceStyle.getVerticalAlignment());
+        destinationStyle.setDataFormat(sourceStyle.getDataFormat());
+        Font sourceFont = sourceWorkbook.getFontAt(sourceStyle.getFontIndex());
+        Font destinationFont = destinationWorkbook.createFont();
+        copyFont(sourceFont, destinationFont);
+        destinationStyle.setFont(destinationFont);
+        destinationStyle.setFillForegroundColor(sourceStyle.getFillForegroundColorColor());
+        destinationStyle.setFillPattern(sourceStyle.getFillPattern());
+        destinationStyle.setBorderTop(sourceStyle.getBorderTop());
+        destinationStyle.setBorderBottom(sourceStyle.getBorderBottom());
+        destinationStyle.setBorderLeft(sourceStyle.getBorderLeft());
+        destinationStyle.setBorderRight(sourceStyle.getBorderRight());
+        destinationStyle.setRotation(sourceStyle.getRotation());
+        destinationStyle.setIndention(sourceStyle.getIndention());
+        destinationStyle.setLocked(sourceStyle.getLocked());
+        destinationStyle.setHidden(sourceStyle.getHidden());
+        destinationStyle.cloneStyleFrom(sourceStyle);
+        destinationStyle.setWrapText(true);
+        return destinationStyle;
+    }
+
+    // 复制字体的方法
+    public static void copyFont(Font sourceFont, Font destinationFont) {
+        destinationFont.setFontHeight(sourceFont.getFontHeight());
+        destinationFont.setFontName(sourceFont.getFontName());
+        destinationFont.setItalic(sourceFont.getItalic());
+        destinationFont.setBold(sourceFont.getBold());
+        destinationFont.setColor(sourceFont.getColor());
+        destinationFont.setStrikeout(sourceFont.getStrikeout());
+        destinationFont.setTypeOffset(sourceFont.getTypeOffset());
+        destinationFont.setUnderline(sourceFont.getUnderline());
+        destinationFont.setCharSet(sourceFont.getCharSet());
+    }
+
+    public static void copyMergedRegions(Sheet srcSheet, Sheet destSheet) {
+        for (int i = 0; i < srcSheet.getNumMergedRegions(); i++) {
+            CellRangeAddress mergedRegion = srcSheet.getMergedRegion(i);
+            destSheet.addMergedRegion(mergedRegion);
+        }
+    }
+
+    public static Pair<ArrayList<String>, List<Map<String, Object>>> readExcel(InputStream inputStream) throws IOException {
+        List<Map<String, Object>> data = new ArrayList<>();
+
+        ArrayList<String> headers = Lists.newArrayList();
+        Workbook workbook = new XSSFWorkbook(inputStream);
         Sheet sheet = workbook.getSheetAt(0);
 
-        Workbook outputWorkbook = new XSSFWorkbook();
-        Sheet outputSheet = outputWorkbook.createSheet();
+        Row headerRow = sheet.getRow(0);
+        int columnCount = headerRow.getLastCellNum();
 
-        // 复制前N行
-        for (int i = 0; i < preRows; i++) {
-            Row row = sheet.getRow(i);
-            if (row != null) {
-                Row outputRow = outputSheet.createRow(i);
-                copyRow(workbook, sheet, outputWorkbook, outputSheet, row, outputRow);
+        for (int rowIndex = 1; rowIndex <= sheet.getLastRowNum(); rowIndex++) {
+            Row currentRow = sheet.getRow(rowIndex);
+            Map<String, Object> rowData = new HashMap<>();
+
+            for (int columnIndex = 0; columnIndex < columnCount; columnIndex++) {
+                Cell currentCell = currentRow.getCell(columnIndex);
+                String header = headerRow.getCell(columnIndex).getStringCellValue();
+                Object cellValue = ExcelProcessor.getCellValue(currentCell);
+
+                rowData.put(header, cellValue);
             }
+            data.add(rowData);
         }
-
-        // 写入数据
-        int startRowIndex = outputSheet.getLastRowNum();
-        for (int i = 0; i < data.size(); i++) {
-            Row row = outputSheet.createRow(startRowIndex + i);
-            Map<String, Object> rowData = data.get(i);
-            int columnIndex = 0;
-            for (String key : rowData.keySet()) {
-                Cell cell = row.createCell(columnIndex);
-                cell.setCellValue(rowData.get(key).toString());
-                columnIndex++;
-            }
-        }
-
-
-        // 复制后NN行
-        int totalRows = outputSheet.getLastRowNum() + 1;
-        for (int i = totalRows; i < lastRows; i++) {
-            Row row = sheet.getRow(i);
-            if (row != null) {
-                Row outputRow = outputSheet.createRow(i);
-                copyRow(workbook, sheet, outputWorkbook, outputSheet, row, outputRow);
-            }
-        }
-
-        // 保存输出Excel文件
-        FileOutputStream fileOut = new FileOutputStream(outputFile);
-        outputWorkbook.write(fileOut);
-        fileOut.close();
-
+        headers.addAll(data.get(0).keySet());
         workbook.close();
-        outputWorkbook.close();
+        return Pair.create(headers, data);
     }
 
-    private static void copyRow(Workbook inputWorkbook, Sheet inputSheet, Workbook outputWorkbook, Sheet outputSheet, Row inputRow, Row outputRow) {
-        for (Cell cell : inputRow) {
-            Cell outputCell = outputRow.createCell(cell.getColumnIndex());
-            outputCell.setCellValue(getCellValue(inputWorkbook, cell));
 
-            CellStyle cellStyle = cell.getCellStyle();
-            CellStyle outputCellStyle = outputWorkbook.createCellStyle();
-            outputCellStyle.cloneStyleFrom(cellStyle);
-            outputCell.setCellStyle(outputCellStyle);
-        }
+    public static List<Object> extraHeader(Sheet sheet, int row) {
 
-        // 处理合并单元格
-        for (CellRangeAddress mergedRegion : inputSheet.getMergedRegions()) {
-            if (mergedRegion.isInRange(inputRow.getRowNum(), inputRow.getRowNum())) {
-                CellRangeAddress outputMergedRegion = new CellRangeAddress(
-                        outputRow.getRowNum(), outputRow.getRowNum(),
-                        mergedRegion.getFirstColumn(), mergedRegion.getLastColumn());
-                outputSheet.addMergedRegion(outputMergedRegion);
-            }
+        ArrayList<Object> headers = Lists.newArrayList();
+
+        Row headerRow = sheet.getRow(row - 1);
+        int columnCount = headerRow.getLastCellNum();
+        for (int columnIndex = 0; columnIndex < columnCount; columnIndex++) {
+            Cell currentCell = headerRow.getCell(columnIndex);
+            headers.add(getCellValue(currentCell));
         }
+        return headers;
     }
 
-    private static String getCellValue(Workbook workbook, Cell cell) {
-        String cellValue = "";
-        if (cell.getCellType() == CellType.STRING) {
-            cellValue = cell.getStringCellValue();
-        } else if (cell.getCellType() == CellType.NUMERIC) {
-            cellValue = String.valueOf(cell.getNumericCellValue());
-        } else if (cell.getCellType() == CellType.BOOLEAN) {
-            cellValue = String.valueOf(cell.getBooleanCellValue());
-        } else if (cell.getCellType() == CellType.FORMULA) {
-            cellValue = String.valueOf(cell.getCellFormula());
-        } else if (cell.getCellType() == CellType.BLANK) {
-            cellValue = "";
-        } else if (cell.getCellType() == CellType.ERROR) {
-            cellValue = String.valueOf(cell.getErrorCellValue());
+
+    public static Object getCellValue(Cell srcCell) {
+        if (srcCell == null) {
+            return "";
         }
-        return cellValue;
+        switch (srcCell.getCellType()) {
+            case STRING:
+                return srcCell.getStringCellValue();
+            case NUMERIC:
+                return srcCell.getNumericCellValue();
+            case BOOLEAN:
+                return srcCell.getBooleanCellValue();
+            case FORMULA:
+                return srcCell.getCellFormula();
+            case BLANK:
+            default:
+                return "";
+        }
     }
 }

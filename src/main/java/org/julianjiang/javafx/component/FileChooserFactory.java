@@ -1,7 +1,11 @@
 package org.julianjiang.javafx.component;
 
 import javafx.geometry.Insets;
-import javafx.scene.control.*;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.ListView;
+import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
 import javafx.scene.text.Font;
 import javafx.stage.DirectoryChooser;
@@ -10,7 +14,7 @@ import javafx.stage.Stage;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.math3.util.Pair;
 import org.julianjiang.javafx.Context;
-import org.julianjiang.javafx.processor.FileProcessor;
+import org.julianjiang.javafx.utils.ExcelUtils;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -81,9 +85,10 @@ public class FileChooserFactory {
             try {
                 alert.show();
                 inputStream = new FileInputStream(selectedFile);
-                Pair<ArrayList<String>, List<Map<String, Object>>> dataPair = FileProcessor.readExcel(inputStream);
+                Pair<ArrayList<String>, List<Map<String, Object>>> dataPair = ExcelUtils.readExcel(inputStream);
                 List<String> strings = dataPair.getFirst();
                 if (!Objects.isNull(comboBox)) {
+                    comboBox.getItems().clear();
                     comboBox.getItems().addAll(strings);
                     comboBox.getSelectionModel().select(0);
                     context.setData(dataPair.getSecond());

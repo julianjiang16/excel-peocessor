@@ -33,7 +33,7 @@ public class JavafxExcelProcessorWindow extends Application {
         Rectangle2D bounds = screen.getVisualBounds();
 
         // 计算百分比大小
-        double width = bounds.getWidth() * 0.4; // 宽度为屏幕宽度的80%
+        double width = bounds.getWidth() * 0.43; // 宽度为屏幕宽度的80%
         double height = bounds.getHeight() * 0.6; // 高度为屏幕高度的60%
 
 
@@ -67,7 +67,7 @@ public class JavafxExcelProcessorWindow extends Application {
 
 
         ButtonComponent buttonComponent = new ButtonComponent();
-        HBox buttonBox = buttonComponent.buildButtonBox(typeCombo, context);
+        HBox buttonBox = buttonComponent.buildButtonBox(typeCombo, context, primaryStage);
 
         // 创建垂直布局
         VBox vbox = new VBox(10);

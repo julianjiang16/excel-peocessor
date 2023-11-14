@@ -1,21 +1,37 @@
 package org.julianjiang.javafx.processor;
 
-import javafx.scene.control.Alert;
-import javafx.scene.control.TextField;
+import com.alibaba.fastjson.JSONObject;
+import com.google.common.collect.Lists;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.math3.util.Pair;
-import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
-import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.julianjiang.javafx.Context;
-import org.julianjiang.javafx.component.AlertComponent;
+import org.julianjiang.javafx.utils.CellUtils;
 import org.julianjiang.javafx.utils.ExcelUtils;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+
+import static org.julianjiang.javafx.Constants.SERIAL_NUM_COLUMN_NAME;
+import static org.julianjiang.javafx.Constants.TYPE_COLUMN_NAME;
+import static org.julianjiang.javafx.utils.ExcelUtils.extraPic;
 
 public class ExcelProcessor {
 
@@ -34,40 +50,93 @@ public class ExcelProcessor {
         }
 
         /** 列名行号校验 */
-        final TextField titleText = context.getExcelTemplate().getTitleText();
-        final String title = titleText.getText();
-        try {
-            final Integer titleRow = Integer.valueOf(title);
-            if (titleRow < 1) {
-                return Pair.create("列名所处行号必须大于0 !!!", false);
-            }
-        } catch (Exception e) {
-            return Pair.create("列名所处行号必填 !!!", false);
+        if (context.getExcelTemplate().getTitleRow() < 1) {
+            return Pair.create("列名所处行号必须大于0 !!!", false);
         }
 
         /** 如果选择分类，则分类汇总行所处行号必填！！ */
         if (context.isTypeFlag()) {
-            final TextField typeText = context.getExcelTemplate().getTypeText();
-            final String type = typeText.getText();
-            try {
-                final Integer typeRow = Integer.valueOf(type);
-                if (typeRow < 1) {
-                    return Pair.create("分类汇总行所处行号必须大于0 !!!", false);
-                }
-            } catch (Exception e) {
-                return Pair.create("分类汇总行所处行号必填 !!!", false);
+            if (context.getExcelTemplate().getTypeRow() < 1) {
+                return Pair.create("分类汇总行所处行号必须大于0 !!!", false);
             }
+        }
 
+        /** 校验明细数据行号  */
+        if (context.getExcelTemplate().getDetailRow() < 1) {
+            return Pair.create("明细数据行行号必须大于0 !!!", false);
         }
 
         return Pair.create("", true);
     }
 
 
-    public static void outputExcel(Context context) throws IOException, InvalidFormatException {
+    public static void outputExcel(Context context) throws IOException {
+        Workbook workbookInput = WorkbookFactory.create(new File(context.getExcelTemplate().getTemplateFile().getAbsolutePath()));
+        Sheet sheetInput = workbookInput.getSheetAt(0);
+        // 先画页头 并替换变量
+        Workbook outputWorkbook = new XSSFWorkbook();
+        // 画列名
+        final List<Object> titleNames = ExcelUtils.extraHeader(sheetInput, context.getExcelTemplate().getTitleRow());
+        // 分单数据 每个sheet页数据
+        final Map<String, List<Map<String, Object>>> allocationDataMap = groupDataByAllocation(context.getData(), context.getAllocation());
+        for (Map.Entry<String, List<Map<String, Object>>> allocationData : allocationDataMap.entrySet()) {
+            // 需要重新创建sheet页
+            final String sheetName = allocationData.getKey();
+            Sheet outputSheet = outputWorkbook.createSheet(sheetName);
+            copyTemplateHeader(sheetInput, outputSheet, context, workbookInput, outputWorkbook);
+            // 分类数据
+            final Map<String, List<Map<String, Object>>> typeDataMap = groupDataByAllocation(allocationData.getValue(), Lists.newArrayList(TYPE_COLUMN_NAME));
+            for (Map.Entry<String, List<Map<String, Object>>> typeData : typeDataMap.entrySet()) {
+                String typeName = typeData.getKey();
+                // todo jcj 修改为明细行
+                Row rowInput = sheetInput.getRow(context.getExcelTemplate().getDetailRow());
+                final List<Map<String, Object>> detailDatas = typeData.getValue();
+                for (Map<String, Object> detailData : detailDatas) {
+                    Row rowOutput = outputSheet.createRow(outputSheet.getLastRowNum() + 1);
+                    for (int i = 0; i < titleNames.size(); i++) {
+                        final Object cellData = detailData.get(titleNames.get(i));
+                        Cell cellInput = rowInput.getCell(i);
+                        final Cell cellOutPut = rowOutput.createCell(i);
+                        if (SERIAL_NUM_COLUMN_NAME.equals(titleNames.get(i))) {
+                            CellUtils.setCellValue(cellOutPut, i + 1);
+                        } else {
+                            if (Objects.isNull(cellData)) {
+                                System.err.println(JSONObject.toJSONString(titleNames));
+                                System.err.println(JSONObject.toJSONString(detailData));
+                                System.err.println(titleNames.get(i));
+                            }
+                            CellUtils.setCellValue(cellOutPut, cellData);
+                        }
+                        cellOutPut.setCellStyle(ExcelUtils.getCopyCellStyle(cellInput.getCellStyle(), workbookInput, outputWorkbook));
+                    }
+                }
+                // 汇总行
+                if (context.isTypeFlag()) {
+                    copyTemplateType(sheetInput, outputSheet, context, workbookInput, outputWorkbook);
+                }
+            }
+            // 单个 sheet页的后续工作
+            copyTemplateBottom(sheetInput, outputSheet, context, workbookInput, outputWorkbook);
+            // 处理单sheet 图片
+            extraPic(sheetInput, outputSheet, outputWorkbook);
+            // todo jcj 暂时先创建1页
+            break;
+        }
+
+        String fileExtension = ".xlsx"; // 文件后缀
+        String filePath = Paths.get(context.getOutputPath(), "测试输出" + fileExtension).toString();
+        // 保存输出Excel文件
+        FileOutputStream fileOut = new FileOutputStream(filePath);
+        outputWorkbook.write(fileOut);
+        fileOut.close();
+
+        workbookInput.close();
+        outputWorkbook.close();
+
+        // 最后处理图片附件
 
         // 输出excel
-        Pair<List<Cell>, List<Cell>> preLastCell = extractRowsFromExcel(context.getExcelTemplate().getTemplateFile(), context.getExcelTemplate().getPreRows(), context.getExcelTemplate().getLastRows());
+      /*  final Pair<List<Row>, List<Row>> preLastRows = extractRowsFromExcel(context.getExcelTemplate().getTemplateFile(), context.getExcelTemplate().getPreRows(), context.getExcelTemplate().getLastRows());
         // 分单数据
         Map<String, List<Map<String, Object>>> groupData = groupDataByAllocation(context.getData(), context.getAllocation());
         Alert alert = AlertComponent.buildAlert("处理中...", "有" + groupData.keySet().size() + "个文件需要生成，请耐心等待...");
@@ -82,7 +151,61 @@ public class ExcelProcessor {
         }
         if (alert.isShowing()) {
             alert.close();
+        }*/
+    }
+
+
+    private static void copyTemplateType(Sheet sheetInput, Sheet outputSheet, Context context, Workbook workbookInput, Workbook outputWorkbook) {
+        ExcelUtils.copyMergedCellStyles(sheetInput, outputSheet, context.getExcelTemplate().getTypeRow(), outputSheet.getLastRowNum() + 1, 1);
+        final Row typeRow = sheetInput.getRow(context.getExcelTemplate().getTypeRow());
+        Row typeRowOutput = outputSheet.createRow(outputSheet.getLastRowNum() + 1);
+        for (int j = 0; j < typeRow.getLastCellNum(); j++) { // 遍历每一列
+            Cell cellInput = typeRow.getCell(j);
+            Cell cellOutput = typeRowOutput.createCell(j);
+            if (cellInput != null) {
+                ExcelUtils.setCellValue(cellInput, cellOutput);
+                // todo jcj替换变量
+                cellOutput.setCellStyle(ExcelUtils.getCopyCellStyle(cellInput.getCellStyle(), workbookInput, outputWorkbook));
+            }
         }
+    }
+
+    private static void copyTemplateHeader(Sheet sheetInput, Sheet outputSheet, Context context, Workbook workbookInput, Workbook outputWorkbook) {
+        ExcelUtils.copyMergedCellStyles(sheetInput, outputSheet, 0, outputSheet.getLastRowNum() + 1, context.getExcelTemplate().getPreRows());
+        for (int i = 0; i < context.getExcelTemplate().getPreRows(); i++) {
+            Row rowInput = sheetInput.getRow(i);
+            Row rowOutput = outputSheet.createRow(outputSheet.getLastRowNum() + 1);
+            rowOutput.setRowStyle(rowInput.getRowStyle());
+            for (int j = 0; j < rowInput.getLastCellNum(); j++) { // 遍历每一列
+                Cell cellInput = rowInput.getCell(j);
+                Cell cellOutput = rowOutput.createCell(j);
+                if (cellInput != null) {
+                    ExcelUtils.setCellValue(cellInput, cellOutput);
+                    cellOutput.setCellStyle(ExcelUtils.getCopyCellStyle(cellInput.getCellStyle(), workbookInput, outputWorkbook));
+                }
+            }
+        }
+    }
+
+
+    private static void copyTemplateBottom(Sheet sheetInput, Sheet outputSheet, Context context, Workbook workbookInput, Workbook outputWorkbook) {
+
+        int startRow = sheetInput.getLastRowNum() - context.getExcelTemplate().getLastRows() + 1;
+        ExcelUtils.copyMergedCellStyles(sheetInput, outputSheet, startRow, outputSheet.getLastRowNum() + 1, context.getExcelTemplate().getLastRows());
+        for (int i = 0; i < context.getExcelTemplate().getLastRows(); i++, startRow++) {
+            Row rowInput = sheetInput.getRow(startRow);
+            Row rowOutput = outputSheet.createRow(outputSheet.getLastRowNum() + 1);
+            rowOutput.setRowStyle(rowInput.getRowStyle());
+            for (int j = 0; j < rowInput.getLastCellNum(); j++) { // 遍历每一列
+                Cell cellInput = rowInput.getCell(j);
+                Cell cellOutput = rowOutput.createCell(j);
+                if (cellInput != null) {
+                    ExcelUtils.setCellValue(cellInput, cellOutput);
+                    cellOutput.setCellStyle(ExcelUtils.getCopyCellStyle(cellInput.getCellStyle(), workbookInput, outputWorkbook));
+                }
+            }
+        }
+
     }
 
 
@@ -238,9 +361,9 @@ public class ExcelProcessor {
     }
 
 
-    public static Pair<List<Cell>, List<Cell>> extractRowsFromExcel(File templateFile, int preRows, int lastRows) throws IOException {
-        List<Cell> preRowCells = new ArrayList<>();
-        List<Cell> lastRowCells = new ArrayList<>();
+    public static Pair<List<Row>, List<Row>> extractRowsFromExcel(File templateFile, int preRows, int lastRows) throws IOException {
+        List<Row> preRow = new ArrayList<>();
+        List<Row> lastRow = new ArrayList<>();
         Workbook workbook = new XSSFWorkbook(new FileInputStream(templateFile));
         Sheet sheet = workbook.getSheetAt(0);
         int totalRows = sheet.getLastRowNum() + 1;
@@ -248,36 +371,17 @@ public class ExcelProcessor {
         for (int i = 0; i < Math.min(preRows, totalRows); i++) {
             Row row = sheet.getRow(i);
             if (row != null) {
-                for (Cell cell : row) {
-                    preRowCells.add(cell);
-                }
+                preRow.add(row);
             }
         }
         // 抽取最后X行单元格
         for (int i = Math.max(totalRows - lastRows, 0); i < totalRows; i++) {
             Row row = sheet.getRow(i);
             if (row != null) {
-                for (Cell cell : row) {
-                    lastRowCells.add(cell);
-                }
+                lastRow.add(row);
             }
         }
-        // 保持单元格顺序与原Excel一致
-        preRowCells.sort((c1, c2) -> {
-            int rowComparison = Integer.compare(c1.getRowIndex(), c2.getRowIndex());
-            if (rowComparison == 0) {
-                return Integer.compare(c1.getColumnIndex(), c2.getColumnIndex());
-            }
-            return rowComparison;
-        });
-        lastRowCells.sort((c1, c2) -> {
-            int rowComparison = Integer.compare(c1.getRowIndex(), c2.getRowIndex());
-            if (rowComparison == 0) {
-                return Integer.compare(c1.getColumnIndex(), c2.getColumnIndex());
-            }
-            return rowComparison;
-        });
 
-        return Pair.create(preRowCells, lastRowCells);
+        return Pair.create(preRow, lastRow);
     }
 }

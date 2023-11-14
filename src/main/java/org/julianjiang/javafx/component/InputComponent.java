@@ -27,7 +27,7 @@ public class InputComponent {
         noticeHBox.setSpacing(10); // 设置组件间距
 
         HBox titleHBox = new HBox();
-        titleHBox.setPadding(new Insets(30, 0, 0, 75)); // 设置左边距
+        titleHBox.setPadding(new Insets(30, 0, 0, 20)); // 设置左边距
         titleHBox.setSpacing(10); // 设置组件间距
 
 
@@ -37,7 +37,7 @@ public class InputComponent {
 
         Label label1 = new Label();
         label1.setFont(font);
-        label1.setText("保留模板前");
+        label1.setText("选择的模板文件中，前");
         TextField textField = new TextField();
 
         // 创建一个过滤器，只允许输入整数
@@ -56,7 +56,7 @@ public class InputComponent {
         textField.setPrefWidth(60);
         textField.setFont(font);
         Label label2 = new Label();
-        label2.setText("行，并且保留模板后");
+        label2.setText("行为页头，后");
         label2.setFont(font);
 
         TextField textField2 = new TextField();
@@ -67,7 +67,7 @@ public class InputComponent {
         textField2.setTextFormatter(textFormatter2);
 
         Label label3 = new Label();
-        label3.setText("行！");
+        label3.setText("行为页尾（生成文件是会保留页头页尾，必填！！！）；");
         label3.setFont(font);
         noticeHBox.getChildren().addAll(noticeLabel, label1, textField, label2, textField2, label3);
 
@@ -76,7 +76,7 @@ public class InputComponent {
 
         // 选择的模板文件中，列名处于第 N 行。  分类汇总行（样式）处于第 N 行；
 
-        final Label titleLabel = new Label("选择的模板文件中，列名处于第");
+        final Label titleLabel = new Label("列名处于第");
         titleLabel.setFont(font);
 
         final TextField titleTextField = new TextField("0");
@@ -95,14 +95,25 @@ public class InputComponent {
         TextFormatter<String> typeTextFormatter = new TextFormatter<>(integerFilter);
         typeTextField.setTextFormatter(typeTextFormatter);
 
-        final Label typeRowLabel = new Label("行(非必填)。 ");
+        final Label typeRowLabel = new Label("行(非必填)，明细数据行（样式）处于第");
         typeRowLabel.setFont(font);
+
+
+        final TextField detailTextField = new TextField("0");
+        detailTextField.setFont(font);
+        detailTextField.setPrefWidth(60);
+        TextFormatter<String> detailTextFormatter = new TextFormatter<>(integerFilter);
+        detailTextField.setTextFormatter(detailTextFormatter);
+
+        final Label detailRowLabel = new Label("行(必填).");
+        detailRowLabel.setFont(font);
 
 
         context.getExcelTemplate().setTitleText(titleTextField);
         context.getExcelTemplate().setTypeText(typeTextField);
+        context.getExcelTemplate().setDetailText(detailTextField);
 
-        titleHBox.getChildren().addAll(titleLabel, titleTextField, titleRowLabel, typeTextField, typeRowLabel);
+        titleHBox.getChildren().addAll(titleLabel, titleTextField, titleRowLabel, typeTextField, typeRowLabel, detailTextField, detailRowLabel);
         vBox.getChildren().addAll(noticeHBox, titleHBox);
         return vBox;
     }

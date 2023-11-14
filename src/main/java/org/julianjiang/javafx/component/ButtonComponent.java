@@ -2,14 +2,18 @@ package org.julianjiang.javafx.component;
 
 import com.google.common.collect.Lists;
 import javafx.collections.ObservableList;
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ListView;
 import javafx.scene.control.MultipleSelectionModel;
+import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
 import javafx.scene.text.Font;
+import javafx.stage.Stage;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.math3.util.Pair;
 import org.julianjiang.javafx.Context;
@@ -17,7 +21,7 @@ import org.julianjiang.javafx.processor.ExcelProcessor;
 
 public class ButtonComponent {
 
-    public HBox buildButtonBox(ListView listView, Context context) {
+    public HBox buildButtonBox(ListView listView, Context context, Stage primaryStage) {
         HBox hBox = new HBox();
         hBox.setAlignment(Pos.CENTER);
         hBox.setPadding(new Insets(30, 0, 30, 20)); // 设置左边距
@@ -31,17 +35,20 @@ public class ButtonComponent {
             // 设置分单条件
             MultipleSelectionModel<String> selectionModel = listView.getSelectionModel();
             ObservableList<String> selectedItems = selectionModel.getSelectedItems();
-            selectedItems.stream().forEach(i -> {
-                if (CollectionUtils.isEmpty(context.getAllocation())) {
-                    context.setAllocation(Lists.newArrayList(i));
-                } else {
-                    context.getAllocation().add(i);
-                }
-            });
+
+            if (!CollectionUtils.isEmpty(context.getAllocation())) {
+                context.getAllocation().clear();
+            }else {
+                context.setAllocation(Lists.newArrayList());
+            }
+            context.getAllocation().addAll(selectedItems);
 
             // 设置模板前后保留行
-            context.getExcelTemplate().setPreRows(Integer.valueOf(context.getExcelTemplate().getPreText().getText()));
-            context.getExcelTemplate().setLastRows(Integer.valueOf(context.getExcelTemplate().getLastText().getText()));
+            context.getExcelTemplate().setPreRows(getTextVal(context.getExcelTemplate().getPreText()));
+            context.getExcelTemplate().setLastRows(getTextVal(context.getExcelTemplate().getLastText()));
+            context.getExcelTemplate().setDetailRow(getTextVal(context.getExcelTemplate().getDetailText()));
+            context.getExcelTemplate().setTitleRow(getTextVal(context.getExcelTemplate().getTitleText()));
+            context.getExcelTemplate().setTypeRow(getTextVal(context.getExcelTemplate().getTypeText()));
 
             // 首先校验
             Pair<String, Boolean> validatePair = ExcelProcessor.validate(context);
@@ -74,7 +81,22 @@ public class ButtonComponent {
         Button cancel = new Button();
         cancel.setText("关闭");
         cancel.setFont(f);
+        cancel.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                primaryStage.close();
+            }
+        });
         hBox.getChildren().addAll(process, cancel);
         return hBox;
+    }
+
+    private int getTextVal(TextField field) {
+        try {
+            final Integer val = Integer.valueOf(field.getText());
+            return val;
+        } catch (Exception e) {
+            return 0;
+        }
     }
 }
