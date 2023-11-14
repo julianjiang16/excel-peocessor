@@ -1,6 +1,5 @@
 package org.julianjiang.javafx.processor;
 
-import com.alibaba.fastjson.JSONObject;
 import com.google.common.collect.Lists;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
@@ -31,6 +30,7 @@ import java.util.Objects;
 
 import static org.julianjiang.javafx.Constants.SERIAL_NUM_COLUMN_NAME;
 import static org.julianjiang.javafx.Constants.TYPE_COLUMN_NAME;
+import static org.julianjiang.javafx.Constants.TYPE_COLUMN_NAME_REPLACE;
 import static org.julianjiang.javafx.utils.ExcelUtils.extraPic;
 
 public class ExcelProcessor {
@@ -88,9 +88,9 @@ public class ExcelProcessor {
             final Map<String, List<Map<String, Object>>> typeDataMap = groupDataByAllocation(allocationData.getValue(), Lists.newArrayList(TYPE_COLUMN_NAME));
             for (Map.Entry<String, List<Map<String, Object>>> typeData : typeDataMap.entrySet()) {
                 String typeName = typeData.getKey();
-                // todo jcj 修改为明细行
                 Row rowInput = sheetInput.getRow(context.getExcelTemplate().getDetailRow());
                 final List<Map<String, Object>> detailDatas = typeData.getValue();
+                int seq = 1;
                 for (Map<String, Object> detailData : detailDatas) {
                     Row rowOutput = outputSheet.createRow(outputSheet.getLastRowNum() + 1);
                     for (int i = 0; i < titleNames.size(); i++) {
@@ -98,13 +98,8 @@ public class ExcelProcessor {
                         Cell cellInput = rowInput.getCell(i);
                         final Cell cellOutPut = rowOutput.createCell(i);
                         if (SERIAL_NUM_COLUMN_NAME.equals(titleNames.get(i))) {
-                            CellUtils.setCellValue(cellOutPut, i + 1);
+                            CellUtils.setCellValue(cellOutPut, seq++);
                         } else {
-                            if (Objects.isNull(cellData)) {
-                                System.err.println(JSONObject.toJSONString(titleNames));
-                                System.err.println(JSONObject.toJSONString(detailData));
-                                System.err.println(titleNames.get(i));
-                            }
                             CellUtils.setCellValue(cellOutPut, cellData);
                         }
                         cellOutPut.setCellStyle(ExcelUtils.getCopyCellStyle(cellInput.getCellStyle(), workbookInput, outputWorkbook));
@@ -112,7 +107,7 @@ public class ExcelProcessor {
                 }
                 // 汇总行
                 if (context.isTypeFlag()) {
-                    copyTemplateType(sheetInput, outputSheet, context, workbookInput, outputWorkbook);
+                    copyTemplateType(sheetInput, outputSheet, context, workbookInput, outputWorkbook, typeName);
                 }
             }
             // 单个 sheet页的后续工作
@@ -155,7 +150,7 @@ public class ExcelProcessor {
     }
 
 
-    private static void copyTemplateType(Sheet sheetInput, Sheet outputSheet, Context context, Workbook workbookInput, Workbook outputWorkbook) {
+    private static void copyTemplateType(Sheet sheetInput, Sheet outputSheet, Context context, Workbook workbookInput, Workbook outputWorkbook, String typeName) {
         ExcelUtils.copyMergedCellStyles(sheetInput, outputSheet, context.getExcelTemplate().getTypeRow(), outputSheet.getLastRowNum() + 1, 1);
         final Row typeRow = sheetInput.getRow(context.getExcelTemplate().getTypeRow());
         Row typeRowOutput = outputSheet.createRow(outputSheet.getLastRowNum() + 1);
@@ -164,6 +159,10 @@ public class ExcelProcessor {
             Cell cellOutput = typeRowOutput.createCell(j);
             if (cellInput != null) {
                 ExcelUtils.setCellValue(cellInput, cellOutput);
+                final Object cellValue = getCellValue(cellOutput);
+                if (TYPE_COLUMN_NAME_REPLACE.equals(cellValue)) {
+                    cellOutput.setCellValue(typeName);
+                }
                 // todo jcj替换变量
                 cellOutput.setCellStyle(ExcelUtils.getCopyCellStyle(cellInput.getCellStyle(), workbookInput, outputWorkbook));
             }
@@ -343,18 +342,20 @@ public class ExcelProcessor {
     public static Map<String, List<Map<String, Object>>> groupDataByAllocation(List<Map<String, Object>> data, List<String> allocation) {
         // 创建一个Map，用于存储分类结果
         Map<String, List<Map<String, Object>>> groupedData = new HashMap<>();
+        final ArrayList<String> tempStr = Lists.newArrayList();
         // 遍历数据列表
         for (Map<String, Object> item : data) {
             // 根据分类字段的值获取对应的键
-            StringBuilder allocationKey = new StringBuilder();
             for (String allocationField : allocation) {
-                allocationKey.append(item.get(allocationField)).append("-");
+                tempStr.add((String) item.get(allocationField));
             }
 
+            final String allocationKey = String.join("-", tempStr);
+
             // 根据分类键将数据放入对应的列表中
-            List<Map<String, Object>> group = groupedData.getOrDefault(allocationKey.toString(), new ArrayList<>());
+            List<Map<String, Object>> group = groupedData.getOrDefault(allocationKey, new ArrayList<>());
             group.add(item);
-            groupedData.put(allocationKey.toString(), group);
+            groupedData.put(allocationKey, group);
         }
         // 将分类结果转换为列表形式
         return groupedData;
