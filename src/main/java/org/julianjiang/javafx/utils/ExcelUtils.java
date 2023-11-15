@@ -91,7 +91,7 @@ public class ExcelUtils {
 
         // 插入图片
         Picture picture = drawing.createPicture(anchor, pictureIdx);
-        picture.resize(); // 自适应图片大小
+        picture.resize(1.0); // 自适应图片大小
     }
 
 
@@ -117,7 +117,14 @@ public class ExcelUtils {
         }
     }
 
+    public static Map<CellStyle, CellStyle> cacheCellStyle = Maps.newHashMap();
+
     public static CellStyle getCopyCellStyle(CellStyle sourceStyle, Workbook sourceWorkbook, Workbook destinationWorkbook) {
+
+        if (cacheCellStyle.get(sourceStyle) != null) {
+            return cacheCellStyle.get(sourceStyle);
+        }
+
         CellStyle destinationStyle = destinationWorkbook.createCellStyle();
         destinationStyle.setAlignment(sourceStyle.getAlignment());
         destinationStyle.setVerticalAlignment(sourceStyle.getVerticalAlignment());
@@ -138,6 +145,7 @@ public class ExcelUtils {
         destinationStyle.setHidden(sourceStyle.getHidden());
         destinationStyle.cloneStyleFrom(sourceStyle);
         destinationStyle.setWrapText(true);
+        cacheCellStyle.put(sourceStyle, destinationStyle);
         return destinationStyle;
     }
 

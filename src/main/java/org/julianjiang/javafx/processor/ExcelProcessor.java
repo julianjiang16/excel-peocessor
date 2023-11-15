@@ -79,6 +79,7 @@ public class ExcelProcessor {
         final List<Object> titleNames = ExcelUtils.extraHeader(sheetInput, context.getExcelTemplate().getTitleRow());
         // 分单数据 每个sheet页数据
         final Map<String, List<Map<String, Object>>> allocationDataMap = groupDataByAllocation(context.getData(), context.getAllocation());
+        Row rowInput = sheetInput.getRow(context.getExcelTemplate().getDetailRow());
         for (Map.Entry<String, List<Map<String, Object>>> allocationData : allocationDataMap.entrySet()) {
             // 需要重新创建sheet页
             final String sheetName = allocationData.getKey();
@@ -86,9 +87,10 @@ public class ExcelProcessor {
             copyTemplateHeader(sheetInput, outputSheet, context, workbookInput, outputWorkbook);
             // 分类数据
             final Map<String, List<Map<String, Object>>> typeDataMap = groupDataByAllocation(allocationData.getValue(), Lists.newArrayList(TYPE_COLUMN_NAME));
+
             for (Map.Entry<String, List<Map<String, Object>>> typeData : typeDataMap.entrySet()) {
                 String typeName = typeData.getKey();
-                Row rowInput = sheetInput.getRow(context.getExcelTemplate().getDetailRow());
+                // 取模板中明细行样式
                 final List<Map<String, Object>> detailDatas = typeData.getValue();
                 int seq = 1;
                 for (Map<String, Object> detailData : detailDatas) {
@@ -114,8 +116,6 @@ public class ExcelProcessor {
             copyTemplateBottom(sheetInput, outputSheet, context, workbookInput, outputWorkbook);
             // 处理单sheet 图片
             extraPic(sheetInput, outputSheet, outputWorkbook);
-            // todo jcj 暂时先创建1页
-            break;
         }
 
         String fileExtension = ".xlsx"; // 文件后缀
@@ -356,6 +356,7 @@ public class ExcelProcessor {
             List<Map<String, Object>> group = groupedData.getOrDefault(allocationKey, new ArrayList<>());
             group.add(item);
             groupedData.put(allocationKey, group);
+            tempStr.clear();
         }
         // 将分类结果转换为列表形式
         return groupedData;

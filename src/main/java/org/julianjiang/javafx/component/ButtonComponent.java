@@ -1,6 +1,7 @@
 package org.julianjiang.javafx.component;
 
 import com.google.common.collect.Lists;
+import javafx.application.Platform;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
@@ -19,7 +20,13 @@ import org.apache.commons.math3.util.Pair;
 import org.julianjiang.javafx.Context;
 import org.julianjiang.javafx.processor.ExcelProcessor;
 
+import java.io.IOException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 public class ButtonComponent {
+
+    final ExecutorService executorService = Executors.newFixedThreadPool(1);
 
     public HBox buildButtonBox(ListView listView, Context context, Stage primaryStage) {
         HBox hBox = new HBox();
@@ -38,7 +45,7 @@ public class ButtonComponent {
 
             if (!CollectionUtils.isEmpty(context.getAllocation())) {
                 context.getAllocation().clear();
-            }else {
+            } else {
                 context.setAllocation(Lists.newArrayList());
             }
             context.getAllocation().addAll(selectedItems);
@@ -57,13 +64,22 @@ public class ButtonComponent {
                 Alert alert = AlertComponent.buildAlert("处理中...", "正在拼命生成文件中...");
                 try {
                     alert.show();
-                    ExcelProcessor.outputExcel(context);
-                } catch (Exception e) {
-                    e.printStackTrace();
+                    executorService.execute(() -> {
+                        try {
+                            ExcelProcessor.outputExcel(context);
+                            Platform.runLater(() -> {
+                                if (alert.isShowing()) {
+                                    alert.close();
+                                }
+                            });
+                            Platform.runLater(() -> AlertComponent.buildAlert("成功", "文件生成成功！！！").show());
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                            Platform.runLater(() -> AlertComponent.buildAlert("错误", "文件生成失败！！！").show());
+                        }
+                    });
                 } finally {
-                    if (alert.isShowing()) {
-                        alert.close();
-                    }
+                    System.err.println("文件生成任务已提交！！！");
                 }
                 return;
             }
