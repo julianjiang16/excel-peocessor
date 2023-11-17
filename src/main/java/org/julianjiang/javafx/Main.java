@@ -13,7 +13,7 @@ import java.io.IOException;
 import java.util.Iterator;
 
 import static org.julianjiang.javafx.utils.ExcelUtils.copyMergedRegions;
-import static org.julianjiang.javafx.utils.ExcelUtils.extraPic;
+import static org.julianjiang.javafx.utils.ExcelUtils.extraPicV2;
 import static org.julianjiang.javafx.utils.ExcelUtils.getCopyCellStyle;
 import static org.julianjiang.javafx.utils.ExcelUtils.setCellValue;
 
@@ -39,14 +39,14 @@ public class Main {
                     Cell cellInput = rowInput.getCell(i);
                     Cell cellOutput = rowOutput.createCell(i);
                     if (cellInput != null) {
-                        setCellValue(cellInput, cellOutput);
-                        cellOutput.setCellStyle(getCopyCellStyle(cellInput.getCellStyle(), workbookInput, workbookOutput));
+                        setCellValue(cellInput, cellOutput,null);
+                        cellOutput.setCellStyle(getCopyCellStyle(cellInput.getCellStyle(), workbookInput, workbookOutput,false));
                     }
                 }
             }
 
+            extraPicV2(sheetInput, sheetOutput, workbookOutput);
 //            addPic(sheetOutput, workbookOutput, imgPath);
-            extraPic(sheetInput, sheetOutput, workbookOutput);
             workbookOutput.write(fileOut);
         }
     }

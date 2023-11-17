@@ -1,8 +1,7 @@
-package org.julianjiang.javafx;
+package org.julianjiang.javafx.model;
 
 import javafx.scene.control.TextField;
 import lombok.Data;
-import org.julianjiang.javafx.model.ExcelTemplate;
 
 import java.io.File;
 import java.util.List;
@@ -44,4 +43,6 @@ public class Context {
     String lastFilePath;
 
     ExcelTemplate excelTemplate;
+
+    List<String> replaceNames;
 }

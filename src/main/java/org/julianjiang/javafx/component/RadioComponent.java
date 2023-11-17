@@ -7,7 +7,7 @@ import javafx.scene.control.ToggleGroup;
 import javafx.scene.layout.HBox;
 import javafx.scene.text.Font;
 import org.apache.commons.lang.StringUtils;
-import org.julianjiang.javafx.Context;
+import org.julianjiang.javafx.model.Context;
 
 public class RadioComponent {
     Font font;

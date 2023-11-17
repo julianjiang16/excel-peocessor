@@ -3,8 +3,6 @@ package org.julianjiang.javafx.component;
 import com.google.common.collect.Lists;
 import javafx.application.Platform;
 import javafx.collections.ObservableList;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Alert;
@@ -17,9 +15,10 @@ import javafx.scene.text.Font;
 import javafx.stage.Stage;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.math3.util.Pair;
-import org.julianjiang.javafx.Context;
+import org.julianjiang.javafx.model.Context;
 import org.julianjiang.javafx.processor.ExcelProcessor;
 
+import javax.script.ScriptException;
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -73,7 +72,7 @@ public class ButtonComponent {
                                 }
                             });
                             Platform.runLater(() -> AlertComponent.buildAlert("成功", "文件生成成功！！！").show());
-                        } catch (IOException e) {
+                        } catch (IOException | ScriptException e) {
                             e.printStackTrace();
                             Platform.runLater(() -> AlertComponent.buildAlert("错误", "文件生成失败！！！").show());
                         }
@@ -97,12 +96,12 @@ public class ButtonComponent {
         Button cancel = new Button();
         cancel.setText("关闭");
         cancel.setFont(f);
-        cancel.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent event) {
-                primaryStage.close();
-            }
+        cancel.setOnAction(event -> primaryStage.close());
+
+        primaryStage.setOnCloseRequest(event -> {
+            Platform.runLater(() -> executorService.shutdown());
         });
+
         hBox.getChildren().addAll(process, cancel);
         return hBox;
     }

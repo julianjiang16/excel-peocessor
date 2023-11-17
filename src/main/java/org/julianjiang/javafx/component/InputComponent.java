@@ -7,7 +7,7 @@ import javafx.scene.control.TextFormatter;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
-import org.julianjiang.javafx.Context;
+import org.julianjiang.javafx.model.Context;
 
 import java.util.function.UnaryOperator;
 
@@ -56,7 +56,7 @@ public class InputComponent {
         textField.setPrefWidth(60);
         textField.setFont(font);
         Label label2 = new Label();
-        label2.setText("行为页头，后");
+        label2.setText("行为页头(包含列名行)，后");
         label2.setFont(font);
 
         TextField textField2 = new TextField();

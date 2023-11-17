@@ -2,10 +2,12 @@ package org.julianjiang.javafx.utils;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Triple;
 import org.apache.commons.math3.util.Pair;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.ClientAnchor;
 import org.apache.poi.ss.usermodel.CreationHelper;
 import org.apache.poi.ss.usermodel.Drawing;
@@ -16,6 +18,7 @@ import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.julianjiang.javafx.model.SheetContext;
 import org.julianjiang.javafx.processor.ExcelProcessor;
 
 import java.io.IOException;
@@ -25,6 +28,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 public class ExcelUtils {
@@ -48,29 +52,55 @@ public class ExcelUtils {
     }
 
 
+    public static void extraPicV2(Sheet inputSheet, Sheet outSheet, Workbook outWorkbook) {
+        Drawing<?> drawing = inputSheet.getDrawingPatriarch();
+        for (Object obj : drawing) {
+            if (obj instanceof Picture) {
+                Picture picture = (Picture) obj;
+                ClientAnchor anchor = picture.getClientAnchor();
+                int row = anchor.getDx1();
+                int col = anchor.getDy1();
+                addPic(outSheet, outWorkbook, picture.getPictureData().getData(), row, col);
+            }
+        }
+    }
+
+    public static void addPic(Sheet sheet, Workbook workbook, byte[] imageBytes, int row, int col) {
+        int pictureIdx = workbook.addPicture(imageBytes, Workbook.PICTURE_TYPE_JPEG);
+        CreationHelper helper = workbook.getCreationHelper();
+        Drawing<?> drawing = sheet.createDrawingPatriarch();
+        ClientAnchor anchor = helper.createClientAnchor();
+        anchor.setDx1(row); // 图片起始列
+        anchor.setDy1(col); // 图片起始行
+        // 插入图片
+        Picture picture = drawing.createPicture(anchor, pictureIdx);
+        picture.resize(); // 自适应图片大小
+    }
+
     public static void extraPic(Sheet inputSheet, Sheet outSheet, Workbook outWorkbook) {
         Drawing<?> drawing = inputSheet.getDrawingPatriarch();
+        if (drawing == null){
+            return;
+        }
         // 遍历所有的图形对象
-        Set<String> copiedPictures = new HashSet<>();
-        final HashMap<String, Triple<Integer, Integer, Picture>> keyRowCol = Maps.newHashMap();
+        Set<Picture> copiedPictures = new HashSet<>();
+        final HashMap<Picture, Triple<Integer, Integer, Picture>> keyRowCol = Maps.newHashMap();
         for (Object obj : drawing) {
             if (obj instanceof Picture) {
                 Picture picture = (Picture) obj;
                 ClientAnchor anchor = picture.getClientAnchor();
                 int row = anchor.getRow1();
                 int col = anchor.getCol1();
-                byte[] data = picture.getPictureData().getData();
-                String pictureDataKey = new String(data);
-                if (copiedPictures.contains(pictureDataKey)) {
+                if (copiedPictures.contains(picture)) {
                     // 元素相同则判断 起始位置
-                    final Triple<Integer, Integer, Picture> triple = keyRowCol.get(pictureDataKey);
+                    final Triple<Integer, Integer, Picture> triple = keyRowCol.get(picture);
                     if (triple.getLeft().compareTo(row) > 0) {
-                        keyRowCol.put(pictureDataKey, Triple.of(row, col, picture));
+                        keyRowCol.put(picture, Triple.of(row, col, picture));
                     }
                     continue;
                 }
-                copiedPictures.add(pictureDataKey);
-                keyRowCol.put(pictureDataKey, Triple.of(row, col, picture));
+                copiedPictures.add(picture);
+                keyRowCol.put(picture, Triple.of(row, col, picture));
             }
         }
 
@@ -80,25 +110,30 @@ public class ExcelUtils {
 
     }
 
-    public static void addPic(Sheet sheet, Workbook workbook, byte[] imageBytes, int row, int col) {
-        int pictureIdx = workbook.addPicture(imageBytes, Workbook.PICTURE_TYPE_JPEG);
-        CreationHelper helper = workbook.getCreationHelper();
-        Drawing<?> drawing = sheet.createDrawingPatriarch();
 
-        ClientAnchor anchor = helper.createClientAnchor();
-        anchor.setCol1(col); // 图片起始列
-        anchor.setRow1(row); // 图片起始行
-
-        // 插入图片
-        Picture picture = drawing.createPicture(anchor, pictureIdx);
-        picture.resize(1.0); // 自适应图片大小
-    }
-
-
-    public static void setCellValue(Cell srcCell, Cell destCell) {
+    public static void setCellValue(Cell srcCell, Cell destCell, SheetContext sheetContext) {
         switch (srcCell.getCellType()) {
             case STRING:
-                destCell.setCellValue(srcCell.getStringCellValue());
+                final String matchedString = PatternUtils.getMatchedString(srcCell.getStringCellValue());
+                // 带后缀
+                if (StringUtils.isNotBlank(matchedString)) {
+                    final Object val = sheetContext.getReplaceMap().get(matchedString);
+                    if (Objects.isNull(val)) {
+                        destCell.setCellValue("");
+                        break;
+                    }
+
+                    if (val instanceof Double){
+                        final String temp = "#" + matchedString + "#";
+                        if (srcCell.getStringCellValue().equals(temp)){
+                            destCell.setCellValue((double)val);
+                            break;
+                        }
+                    }
+                    destCell.setCellValue(srcCell.getStringCellValue().replace("#" + matchedString + "#", String.valueOf(val)));
+                } else {
+                    destCell.setCellValue(srcCell.getStringCellValue());
+                }
                 break;
             case NUMERIC:
                 destCell.setCellValue(srcCell.getNumericCellValue());
@@ -119,12 +154,11 @@ public class ExcelUtils {
 
     public static Map<CellStyle, CellStyle> cacheCellStyle = Maps.newHashMap();
 
-    public static CellStyle getCopyCellStyle(CellStyle sourceStyle, Workbook sourceWorkbook, Workbook destinationWorkbook) {
+    public static CellStyle getCopyCellStyle(CellStyle sourceStyle, Workbook sourceWorkbook, Workbook destinationWorkbook, boolean headerFlag) {
 
         if (cacheCellStyle.get(sourceStyle) != null) {
             return cacheCellStyle.get(sourceStyle);
         }
-
         CellStyle destinationStyle = destinationWorkbook.createCellStyle();
         destinationStyle.setAlignment(sourceStyle.getAlignment());
         destinationStyle.setVerticalAlignment(sourceStyle.getVerticalAlignment());
@@ -144,7 +178,7 @@ public class ExcelUtils {
         destinationStyle.setLocked(sourceStyle.getLocked());
         destinationStyle.setHidden(sourceStyle.getHidden());
         destinationStyle.cloneStyleFrom(sourceStyle);
-        destinationStyle.setWrapText(true);
+        destinationStyle.setWrapText(sourceStyle.getWrapText());
         cacheCellStyle.put(sourceStyle, destinationStyle);
         return destinationStyle;
     }
@@ -160,6 +194,7 @@ public class ExcelUtils {
         destinationFont.setTypeOffset(sourceFont.getTypeOffset());
         destinationFont.setUnderline(sourceFont.getUnderline());
         destinationFont.setCharSet(sourceFont.getCharSet());
+        destinationFont.setFontHeightInPoints(sourceFont.getFontHeightInPoints());
     }
 
     public static void copyMergedRegions(Sheet srcSheet, Sheet destSheet) {
@@ -167,6 +202,31 @@ public class ExcelUtils {
             CellRangeAddress mergedRegion = srcSheet.getMergedRegion(i);
             destSheet.addMergedRegion(mergedRegion);
         }
+    }
+
+    public static List<String> getReplaceNames(InputStream inputStream) throws IOException {
+        List<String> data = new ArrayList<>();
+
+        Workbook workbook = new XSSFWorkbook(inputStream);
+        Sheet sheet = workbook.getSheetAt(0);
+
+        for (int rowIndex = 0; rowIndex <= ExcelUtils.getLastRowWithData(sheet); rowIndex++) {
+            Row currentRow = sheet.getRow(rowIndex);
+            for (int columnIndex = 0; columnIndex < currentRow.getLastCellNum(); columnIndex++) {
+                Cell currentCell = currentRow.getCell(columnIndex);
+                try {
+                    String cellValue = (String) ExcelProcessor.getCellValue(currentCell);
+                    final String matchedString = PatternUtils.getMatchedString(cellValue);
+                    if (StringUtils.isNotBlank(matchedString)) {
+                        data.add(matchedString);
+                    }
+                } catch (Exception e) {
+                    continue;
+                }
+            }
+        }
+        workbook.close();
+        return data;
     }
 
     public static Pair<ArrayList<String>, List<Map<String, Object>>> readExcel(InputStream inputStream) throws IOException {
@@ -179,7 +239,7 @@ public class ExcelUtils {
         Row headerRow = sheet.getRow(0);
         int columnCount = headerRow.getLastCellNum();
 
-        for (int rowIndex = 1; rowIndex <= sheet.getLastRowNum(); rowIndex++) {
+        for (int rowIndex = 1; rowIndex <= ExcelUtils.getLastRowWithData(sheet); rowIndex++) {
             Row currentRow = sheet.getRow(rowIndex);
             Map<String, Object> rowData = new HashMap<>();
 
@@ -229,5 +289,28 @@ public class ExcelUtils {
             default:
                 return "";
         }
+    }
+
+    public static int getLastRowWithData(Sheet sheet) {
+        int lastRow = sheet.getLastRowNum();
+        int lastRowWithData = -1;
+        for (int i = lastRow; i >= 0; i--) {
+            boolean breakFlag = false;
+            Row row = sheet.getRow(i);
+            if (row != null) {
+                for (int j = row.getLastCellNum() - 1; j >= 0; j--) {
+                    Cell cell = row.getCell(j);
+                    if (cell != null && cell.getCellType() != CellType.BLANK) {
+                        lastRowWithData = i;
+                        breakFlag = true;
+                        break;
+                    }
+                }
+            }
+            if (breakFlag) {
+                break;
+            }
+        }
+        return lastRowWithData;
     }
 }

@@ -13,7 +13,7 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.math3.util.Pair;
-import org.julianjiang.javafx.Context;
+import org.julianjiang.javafx.model.Context;
 import org.julianjiang.javafx.utils.ExcelUtils;
 
 import java.io.File;
@@ -31,7 +31,7 @@ public class FileChooserFactory {
     String fontTemplate;
     Label label;
 
-    public FileChooserFactory(Font font, Label label,String fontTemplate) {
+    public FileChooserFactory(Font font, Label label, String fontTemplate) {
         this.font = font;
         this.fontTemplate = String.format(fontTemplate, font.getName());
         this.label = label;
@@ -85,14 +85,17 @@ public class FileChooserFactory {
             try {
                 alert.show();
                 inputStream = new FileInputStream(selectedFile);
-                Pair<ArrayList<String>, List<Map<String, Object>>> dataPair = ExcelUtils.readExcel(inputStream);
-                List<String> strings = dataPair.getFirst();
                 if (!Objects.isNull(comboBox)) {
+                    Pair<ArrayList<String>, List<Map<String, Object>>> dataPair = ExcelUtils.readExcel(inputStream);
+                    List<String> strings = dataPair.getFirst();
                     comboBox.getItems().clear();
                     comboBox.getItems().addAll(strings);
                     comboBox.getSelectionModel().select(0);
                     context.setData(dataPair.getSecond());
                 } else {
+                    final List<String> replaceNames = ExcelUtils.getReplaceNames(inputStream);
+                    // 读取模板文件，找出需要替换的预设字段规则
+                    context.setReplaceNames(replaceNames);
                     context.getExcelTemplate().setTemplateFile(selectedFile);
                 }
                 textField.setText(selectedFile.getName());

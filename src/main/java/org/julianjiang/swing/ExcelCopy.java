@@ -3,6 +3,7 @@ package org.julianjiang.swing;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.julianjiang.javafx.utils.ExcelUtils;
 
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -26,7 +27,7 @@ public class ExcelCopy {
 
     private static void copySheet(Sheet srcSheet, Sheet destSheet, Workbook srcWorkbook, Workbook destWorkbook) {
         copyMergedRegions(srcSheet, destSheet);
-        for (int i = srcSheet.getFirstRowNum(); i <= srcSheet.getLastRowNum(); i++) {
+        for (int i = srcSheet.getFirstRowNum(); i <= ExcelUtils.getLastRowWithData(srcSheet); i++) {
             Row srcRow = srcSheet.getRow(i);
             Row destRow = destSheet.createRow(i);
             copyRow(srcRow, destRow, srcWorkbook, destWorkbook);

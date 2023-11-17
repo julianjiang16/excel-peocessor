@@ -1,36 +1,50 @@
 package org.julianjiang.javafx.processor;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.math3.util.Pair;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.ss.usermodel.DateUtil;
+import org.apache.poi.ss.usermodel.PageMargin;
+import org.apache.poi.ss.usermodel.PrintSetup;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.julianjiang.javafx.Context;
+import org.julianjiang.javafx.model.Context;
+import org.julianjiang.javafx.model.ExcelTemplate;
+import org.julianjiang.javafx.model.ProcessType;
+import org.julianjiang.javafx.model.SheetContext;
 import org.julianjiang.javafx.utils.CellUtils;
 import org.julianjiang.javafx.utils.ExcelUtils;
+import org.julianjiang.javafx.utils.FormulaUtils;
+import org.julianjiang.javafx.utils.SimpleDateThreadLocal;
 
+import javax.script.ScriptException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Paths;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import static org.julianjiang.javafx.Constants.FORMULA_SUFFIX;
 import static org.julianjiang.javafx.Constants.SERIAL_NUM_COLUMN_NAME;
+import static org.julianjiang.javafx.Constants.SUM_SUFFIX;
 import static org.julianjiang.javafx.Constants.TYPE_COLUMN_NAME;
-import static org.julianjiang.javafx.Constants.TYPE_COLUMN_NAME_REPLACE;
+import static org.julianjiang.javafx.Constants.TYPE_SUFFIX;
+import static org.julianjiang.javafx.utils.ExcelUtils.cacheCellStyle;
 import static org.julianjiang.javafx.utils.ExcelUtils.extraPic;
 
 public class ExcelProcessor {
@@ -69,8 +83,28 @@ public class ExcelProcessor {
         return Pair.create("", true);
     }
 
+    public static void main(String[] args) throws IOException, ScriptException {
+        final ExcelTemplate excelTemplate = new ExcelTemplate();
+        excelTemplate.setPreRows(3);
+        excelTemplate.setLastRows(4);
 
-    public static void outputExcel(Context context) throws IOException {
+//        excelTemplate.setTypeRow(7);
+        excelTemplate.setDetailRow(6);
+        excelTemplate.setTitleRow(3);
+        final File templateFile = new File("E:\\data\\excel-test\\test\\模板.xlsx");
+        excelTemplate.setTemplateFile(templateFile);
+        final Context context = new Context(excelTemplate);
+        final File detailFile = new File("E:\\data\\excel-test\\test\\明细数据.xlsx");
+        Pair<ArrayList<String>, List<Map<String, Object>>> dataPair = ExcelUtils.readExcel(new FileInputStream(detailFile));
+        context.setAllocation(Lists.newArrayList("发货时间"));
+        context.setTypeFlag(false);
+        context.setOutputPath("E:\\data\\excel-test\\test");
+        context.setData(dataPair.getValue());
+        context.setReplaceNames(ExcelUtils.getReplaceNames(new FileInputStream(templateFile)));
+        outputExcel(context);
+    }
+
+    public static void outputExcel(Context context) throws IOException, ScriptException {
         Workbook workbookInput = WorkbookFactory.create(new File(context.getExcelTemplate().getTemplateFile().getAbsolutePath()));
         Sheet sheetInput = workbookInput.getSheetAt(0);
         // 先画页头 并替换变量
@@ -79,14 +113,24 @@ public class ExcelProcessor {
         final List<Object> titleNames = ExcelUtils.extraHeader(sheetInput, context.getExcelTemplate().getTitleRow());
         // 分单数据 每个sheet页数据
         final Map<String, List<Map<String, Object>>> allocationDataMap = groupDataByAllocation(context.getData(), context.getAllocation());
-        Row rowInput = sheetInput.getRow(context.getExcelTemplate().getDetailRow());
+        Row rowInput = sheetInput.getRow(context.getExcelTemplate().getDetailRow() - 1);
         for (Map.Entry<String, List<Map<String, Object>>> allocationData : allocationDataMap.entrySet()) {
+
+            final SheetContext sheetContext = new SheetContext();
+            // 处理普通替换字段
+            handleSpecificField(context.getReplaceNames(), sheetContext, allocationData.getValue(), ProcessType.SAMPLE);
+
             // 需要重新创建sheet页
             final String sheetName = allocationData.getKey();
             Sheet outputSheet = outputWorkbook.createSheet(sheetName);
-            copyTemplateHeader(sheetInput, outputSheet, context, workbookInput, outputWorkbook);
+            copyTemplateHeader(sheetInput, outputSheet, context, workbookInput, outputWorkbook, sheetContext);
             // 分类数据
-            final Map<String, List<Map<String, Object>>> typeDataMap = groupDataByAllocation(allocationData.getValue(), Lists.newArrayList(TYPE_COLUMN_NAME));
+            Map<String, List<Map<String, Object>>> typeDataMap = groupDataByAllocation(allocationData.getValue(), Lists.newArrayList(TYPE_COLUMN_NAME));
+            if (!context.isTypeFlag()) {
+                // 不是分类则构造新的sheet页数据
+                typeDataMap = Maps.newHashMap();
+                typeDataMap.put(allocationData.getKey(), allocationData.getValue());
+            }
 
             for (Map.Entry<String, List<Map<String, Object>>> typeData : typeDataMap.entrySet()) {
                 String typeName = typeData.getKey();
@@ -99,23 +143,38 @@ public class ExcelProcessor {
                         final Object cellData = detailData.get(titleNames.get(i));
                         Cell cellInput = rowInput.getCell(i);
                         final Cell cellOutPut = rowOutput.createCell(i);
+                        cellOutPut.setCellStyle(ExcelUtils.getCopyCellStyle(cellInput.getCellStyle(), workbookInput, outputWorkbook, false));
                         if (SERIAL_NUM_COLUMN_NAME.equals(titleNames.get(i))) {
                             CellUtils.setCellValue(cellOutPut, seq++);
                         } else {
-                            CellUtils.setCellValue(cellOutPut, cellData);
+                            if (Objects.isNull(cellData)) {
+                                CellUtils.setCellValue(cellOutPut, "");
+                            } else {
+                                CellUtils.setCellValue(cellOutPut, cellData);
+                            }
                         }
-                        cellOutPut.setCellStyle(ExcelUtils.getCopyCellStyle(cellInput.getCellStyle(), workbookInput, outputWorkbook));
+                        setCellWidth(sheetInput, outputSheet, i);
                     }
                 }
                 // 汇总行
                 if (context.isTypeFlag()) {
-                    copyTemplateType(sheetInput, outputSheet, context, workbookInput, outputWorkbook, typeName);
+                    // 汇总行处理汇总字段
+                    handleSpecificField(context.getReplaceNames(), sheetContext, typeData.getValue(), ProcessType.TYPE);
+                    copyTemplateType(sheetInput, outputSheet, context, workbookInput, outputWorkbook, typeName, sheetContext);
                 }
             }
             // 单个 sheet页的后续工作
-            copyTemplateBottom(sheetInput, outputSheet, context, workbookInput, outputWorkbook);
+            // 处理总计
+            handleSpecificField(context.getReplaceNames(), sheetContext, allocationData.getValue(), ProcessType.SUM);
+            handleSpecificField(context.getReplaceNames(), sheetContext, allocationData.getValue(), ProcessType.FORMULA);
+            copyTemplateBottom(sheetInput, outputSheet, context, workbookInput, outputWorkbook, sheetContext);
             // 处理单sheet 图片
             extraPic(sheetInput, outputSheet, outputWorkbook);
+
+            // todo jcj 先1个 sheet
+            setPageSize(sheetInput, outputSheet);
+            outputSheet.setAutobreaks(true);
+            break;
         }
 
         String fileExtension = ".xlsx"; // 文件后缀
@@ -128,6 +187,7 @@ public class ExcelProcessor {
         workbookInput.close();
         outputWorkbook.close();
 
+        cacheCellStyle.clear();
         // 最后处理图片附件
 
         // 输出excel
@@ -149,47 +209,131 @@ public class ExcelProcessor {
         }*/
     }
 
+    public static void handleSpecificField(List<String> replaceNames, SheetContext sheetContext, List<Map<String, Object>> data, ProcessType type) throws ScriptException {
+        switch (type) {
+            case SAMPLE:
+                for (String replaceName : replaceNames) {
+                    if (!replaceName.endsWith(SUM_SUFFIX) && !replaceName.endsWith(TYPE_SUFFIX) && !replaceName.endsWith(FORMULA_SUFFIX)) { // 就是简单替换
+                        final Object replaceVal = data.get(0).get(replaceName);
+                        sheetContext.getReplaceMap().put(replaceName, replaceVal);
+                    }
+                }
+                break;
+            case SUM:
+                for (String replaceName : replaceNames) {
+                    if (replaceName.endsWith(SUM_SUFFIX)) { // 总计
+                        // 转换为真实字段
+                        final String realFieldName = replaceName.replaceAll(SUM_SUFFIX, "");
+                        final double sum = data.stream().map(i -> i.get(realFieldName)).mapToDouble(i -> (double) i).sum();
+                        sheetContext.getReplaceMap().put(replaceName, sum);
+                    }
+                }
+                break;
+            case TYPE:
+                for (String replaceName : replaceNames) {
+                    if (replaceName.endsWith(TYPE_SUFFIX)) { //汇总
+                        final String realFieldName = replaceName.replaceAll(TYPE_SUFFIX, "");
+                        // 先检测目标数据类型
+                        final Object val = data.get(0).get(realFieldName);
+                        if (val instanceof String) {
+                            String replaceVal = (String) val;
+                            sheetContext.getReplaceMap().put(replaceName, replaceVal);
+                            continue;
+                        }
 
-    private static void copyTemplateType(Sheet sheetInput, Sheet outputSheet, Context context, Workbook workbookInput, Workbook outputWorkbook, String typeName) {
-        ExcelUtils.copyMergedCellStyles(sheetInput, outputSheet, context.getExcelTemplate().getTypeRow(), outputSheet.getLastRowNum() + 1, 1);
-        final Row typeRow = sheetInput.getRow(context.getExcelTemplate().getTypeRow());
+                        if (val instanceof Double || val instanceof Float) {
+                            final double sum = data.stream().map(i -> i.get(realFieldName)).mapToDouble(i -> (double) i).sum();
+                            sheetContext.getReplaceMap().put(replaceName, sum);
+                        }
+                    }
+                }
+                break;
+            case FORMULA:
+                for (String replaceName : replaceNames) {
+                    if (replaceName.endsWith(FORMULA_SUFFIX)) { // 公式 支持简单的 加减乘除
+                        // 先获取真实的公式 ，然后再将字段替换为真实值   再计算 ， 并且公式的值必须在sheetContext map中能取到，所以需要最后执行
+                        final String formula = replaceName.replaceAll(FORMULA_SUFFIX, "");
+                        final String realFormula = FormulaUtils.convert2Formula(formula, sheetContext.getReplaceMap());
+                        final Object o = FormulaUtils.analysisFormula(realFormula);
+                        sheetContext.getReplaceMap().put(replaceName, o);
+                    }
+                }
+                break;
+            default:
+                break;
+        }
+    }
+
+
+    private static void setPageSize(Sheet sourceSheet, Sheet targetSheet) {
+
+        // 拷贝页面设置
+        PrintSetup srcPrintSetup = sourceSheet.getPrintSetup();
+        PrintSetup destPrintSetup = targetSheet.getPrintSetup();
+        destPrintSetup.setPaperSize(srcPrintSetup.getPaperSize());
+        destPrintSetup.setFitHeight(srcPrintSetup.getFitHeight());
+        destPrintSetup.setFitWidth(srcPrintSetup.getFitWidth());
+        destPrintSetup.setLeftToRight(srcPrintSetup.getLeftToRight());
+        destPrintSetup.setLandscape(srcPrintSetup.getLandscape());
+        destPrintSetup.setHeaderMargin(srcPrintSetup.getHeaderMargin());
+        destPrintSetup.setFooterMargin(srcPrintSetup.getFooterMargin());
+        destPrintSetup.setCopies(srcPrintSetup.getCopies());
+        destPrintSetup.setScale(srcPrintSetup.getScale());
+        destPrintSetup.setPageStart(srcPrintSetup.getPageStart());
+        destPrintSetup.setValidSettings(srcPrintSetup.getValidSettings());
+        destPrintSetup.setLeftToRight(srcPrintSetup.getLeftToRight());
+
+        targetSheet.setMargin(PageMargin.BOTTOM, sourceSheet.getMargin(PageMargin.BOTTOM));
+        targetSheet.setMargin(PageMargin.LEFT, sourceSheet.getMargin(PageMargin.LEFT));
+        targetSheet.setMargin(PageMargin.TOP, sourceSheet.getMargin(PageMargin.TOP));
+        targetSheet.setMargin(PageMargin.RIGHT, sourceSheet.getMargin(PageMargin.RIGHT));
+        targetSheet.setMargin(PageMargin.HEADER, sourceSheet.getMargin(PageMargin.HEADER));
+        targetSheet.setMargin(PageMargin.FOOTER, sourceSheet.getMargin(PageMargin.FOOTER));
+    }
+
+
+    private static void copyTemplateType(Sheet sheetInput, Sheet outputSheet, Context context, Workbook workbookInput, Workbook outputWorkbook, String typeName, SheetContext sheetContext) {
+        ExcelUtils.copyMergedCellStyles(sheetInput, outputSheet, context.getExcelTemplate().getTypeRow() - 1, outputSheet.getLastRowNum() + 1, 1);
+        final Row typeRow = sheetInput.getRow(context.getExcelTemplate().getTypeRow() - 1);
         Row typeRowOutput = outputSheet.createRow(outputSheet.getLastRowNum() + 1);
         for (int j = 0; j < typeRow.getLastCellNum(); j++) { // 遍历每一列
             Cell cellInput = typeRow.getCell(j);
             Cell cellOutput = typeRowOutput.createCell(j);
             if (cellInput != null) {
-                ExcelUtils.setCellValue(cellInput, cellOutput);
-                final Object cellValue = getCellValue(cellOutput);
-                if (TYPE_COLUMN_NAME_REPLACE.equals(cellValue)) {
-                    cellOutput.setCellValue(typeName);
-                }
+                ExcelUtils.setCellValue(cellInput, cellOutput, sheetContext);
                 // todo jcj替换变量
-                cellOutput.setCellStyle(ExcelUtils.getCopyCellStyle(cellInput.getCellStyle(), workbookInput, outputWorkbook));
+                cellOutput.setCellStyle(ExcelUtils.getCopyCellStyle(cellInput.getCellStyle(), workbookInput, outputWorkbook, false));
+                setCellWidth(sheetInput, outputSheet, j);
             }
         }
     }
 
-    private static void copyTemplateHeader(Sheet sheetInput, Sheet outputSheet, Context context, Workbook workbookInput, Workbook outputWorkbook) {
-        ExcelUtils.copyMergedCellStyles(sheetInput, outputSheet, 0, outputSheet.getLastRowNum() + 1, context.getExcelTemplate().getPreRows());
+    private static void copyTemplateHeader(Sheet sheetInput, Sheet outputSheet, Context context, Workbook workbookInput, Workbook outputWorkbook, SheetContext sheetContext) {
+        int index = outputSheet.getLastRowNum() + 1;
         for (int i = 0; i < context.getExcelTemplate().getPreRows(); i++) {
             Row rowInput = sheetInput.getRow(i);
             Row rowOutput = outputSheet.createRow(outputSheet.getLastRowNum() + 1);
-            rowOutput.setRowStyle(rowInput.getRowStyle());
             for (int j = 0; j < rowInput.getLastCellNum(); j++) { // 遍历每一列
                 Cell cellInput = rowInput.getCell(j);
                 Cell cellOutput = rowOutput.createCell(j);
                 if (cellInput != null) {
-                    ExcelUtils.setCellValue(cellInput, cellOutput);
-                    cellOutput.setCellStyle(ExcelUtils.getCopyCellStyle(cellInput.getCellStyle(), workbookInput, outputWorkbook));
+                    setCellWidth(sheetInput, outputSheet, j);
+                    ExcelUtils.setCellValue(cellInput, cellOutput, sheetContext);
+                    cellOutput.setCellStyle(ExcelUtils.getCopyCellStyle(cellInput.getCellStyle(), workbookInput, outputWorkbook, true));
                 }
             }
         }
+        ExcelUtils.copyMergedCellStyles(sheetInput, outputSheet, 0, index, context.getExcelTemplate().getPreRows());
+    }
+
+    private static void setCellWidth(Sheet srcSheet, Sheet destSheet, int index) {
+        destSheet.setColumnWidth(index, srcSheet.getColumnWidth(index));
     }
 
 
-    private static void copyTemplateBottom(Sheet sheetInput, Sheet outputSheet, Context context, Workbook workbookInput, Workbook outputWorkbook) {
+    private static void copyTemplateBottom(Sheet sheetInput, Sheet outputSheet, Context context, Workbook workbookInput, Workbook outputWorkbook, SheetContext sheetContext) {
 
-        int startRow = sheetInput.getLastRowNum() - context.getExcelTemplate().getLastRows() + 1;
+        int startRow = ExcelUtils.getLastRowWithData(sheetInput) - context.getExcelTemplate().getLastRows() + 1;
         ExcelUtils.copyMergedCellStyles(sheetInput, outputSheet, startRow, outputSheet.getLastRowNum() + 1, context.getExcelTemplate().getLastRows());
         for (int i = 0; i < context.getExcelTemplate().getLastRows(); i++, startRow++) {
             Row rowInput = sheetInput.getRow(startRow);
@@ -199,8 +343,9 @@ public class ExcelProcessor {
                 Cell cellInput = rowInput.getCell(j);
                 Cell cellOutput = rowOutput.createCell(j);
                 if (cellInput != null) {
-                    ExcelUtils.setCellValue(cellInput, cellOutput);
-                    cellOutput.setCellStyle(ExcelUtils.getCopyCellStyle(cellInput.getCellStyle(), workbookInput, outputWorkbook));
+                    ExcelUtils.setCellValue(cellInput, cellOutput, sheetContext);
+                    cellOutput.setCellStyle(ExcelUtils.getCopyCellStyle(cellInput.getCellStyle(), workbookInput, outputWorkbook, false));
+                    setCellWidth(sheetInput, outputSheet, j);
                 }
             }
         }
@@ -324,8 +469,20 @@ public class ExcelProcessor {
                 case STRING:
                     cellValue = currentCell.getStringCellValue();
                     break;
+                case FORMULA:
+                    if (currentCell.getCachedFormulaResultType() == CellType.NUMERIC) { // 数字公式 直接返回显示结果，不返回公式
+                        cellValue = currentCell.getNumericCellValue();
+                    } else {
+                        cellValue = currentCell.getStringCellValue();
+                    }
+                    break;
                 case NUMERIC:
-                    cellValue = currentCell.getNumericCellValue();
+                    if (DateUtil.isCellDateFormatted(currentCell)) {
+                        final SimpleDateFormat simpleDateFormat = SimpleDateThreadLocal.getSimpleDateFormat("yyyy-MM-dd");
+                        cellValue = simpleDateFormat.format(currentCell.getDateCellValue());
+                    } else {
+                        cellValue = currentCell.getNumericCellValue();
+                    }
                     break;
                 case BOOLEAN:
                     cellValue = currentCell.getBooleanCellValue();
