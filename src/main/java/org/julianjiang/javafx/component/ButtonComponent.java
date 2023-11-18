@@ -15,6 +15,7 @@ import javafx.scene.text.Font;
 import javafx.stage.Stage;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.math3.util.Pair;
+import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.julianjiang.javafx.model.Context;
 import org.julianjiang.javafx.processor.ExcelProcessor;
 
@@ -74,7 +75,7 @@ public class ButtonComponent {
                                 }
                             });
                             Platform.runLater(() -> AlertComponent.buildAlert("成功", "文件生成成功！！！").show());
-                        } catch (IOException | ScriptException e) {
+                        } catch (IOException | ScriptException | InvalidFormatException e) {
                             e.printStackTrace();
                             Platform.runLater(() -> AlertComponent.buildAlert("错误", "文件生成失败！！！").show());
                         } finally {

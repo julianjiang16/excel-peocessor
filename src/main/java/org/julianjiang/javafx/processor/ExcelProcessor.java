@@ -5,6 +5,7 @@ import com.google.common.collect.Maps;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.math3.util.Pair;
+import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -65,14 +66,14 @@ public class ExcelProcessor {
         return Pair.create("", true);
     }
 
-    public static void main(String[] args) throws IOException, ScriptException {
+    public static void main(String[] args) throws IOException, ScriptException, InvalidFormatException {
         final ExcelTemplate excelTemplate = new ExcelTemplate();
         excelTemplate.setPreRows(5);
         excelTemplate.setLastRows(4);
 
+        excelTemplate.setTitleRow(5);
         excelTemplate.setTypeRow(7);
         excelTemplate.setDetailRow(6);
-        excelTemplate.setTitleRow(5);
         final File templateFile = new File("C:\\Users\\Administrator\\Desktop\\模板.xlsx");
         excelTemplate.setTemplateFile(templateFile);
         final Context context = new Context(excelTemplate);
@@ -86,8 +87,8 @@ public class ExcelProcessor {
         outputExcel(context);
     }
 
-    public static void outputExcel(Context context) throws IOException, ScriptException {
-        Workbook workbookInput = WorkbookFactory.create(new File(context.getExcelTemplate().getTemplateFile().getAbsolutePath()));
+    public static void outputExcel(Context context) throws IOException, ScriptException, InvalidFormatException {
+        Workbook workbookInput = new XSSFWorkbook(new File(context.getExcelTemplate().getTemplateFile().getAbsolutePath()));
         Sheet sheetInput = workbookInput.getSheetAt(0);
         // 先画页头 并替换变量
         Workbook outputWorkbook = new XSSFWorkbook();
