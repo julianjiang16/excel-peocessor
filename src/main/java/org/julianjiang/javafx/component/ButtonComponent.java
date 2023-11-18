@@ -23,6 +23,8 @@ import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import static org.julianjiang.javafx.utils.ExcelUtils.cacheCellStyle;
+
 public class ButtonComponent {
 
     final ExecutorService executorService = Executors.newFixedThreadPool(1);
@@ -75,6 +77,8 @@ public class ButtonComponent {
                         } catch (IOException | ScriptException e) {
                             e.printStackTrace();
                             Platform.runLater(() -> AlertComponent.buildAlert("错误", "文件生成失败！！！").show());
+                        } finally {
+                            cacheCellStyle.clear();
                         }
                     });
                 } finally {

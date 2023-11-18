@@ -5,16 +5,7 @@ import com.google.common.collect.Maps;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.math3.util.Pair;
-import org.apache.poi.ss.usermodel.Cell;
-import org.apache.poi.ss.usermodel.CellStyle;
-import org.apache.poi.ss.usermodel.CellType;
-import org.apache.poi.ss.usermodel.DateUtil;
-import org.apache.poi.ss.usermodel.PageMargin;
-import org.apache.poi.ss.usermodel.PrintSetup;
-import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.ss.usermodel.Workbook;
-import org.apache.poi.ss.usermodel.WorkbookFactory;
+import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.julianjiang.javafx.model.Context;
@@ -33,18 +24,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
-import static org.julianjiang.javafx.Constants.FORMULA_SUFFIX;
-import static org.julianjiang.javafx.Constants.SERIAL_NUM_COLUMN_NAME;
-import static org.julianjiang.javafx.Constants.SUM_SUFFIX;
-import static org.julianjiang.javafx.Constants.TYPE_COLUMN_NAME;
-import static org.julianjiang.javafx.Constants.TYPE_SUFFIX;
-import static org.julianjiang.javafx.utils.ExcelUtils.cacheCellStyle;
+import static org.julianjiang.javafx.Constants.*;
 import static org.julianjiang.javafx.utils.ExcelUtils.extraPic;
 
 public class ExcelProcessor {
@@ -85,20 +67,20 @@ public class ExcelProcessor {
 
     public static void main(String[] args) throws IOException, ScriptException {
         final ExcelTemplate excelTemplate = new ExcelTemplate();
-        excelTemplate.setPreRows(3);
+        excelTemplate.setPreRows(5);
         excelTemplate.setLastRows(4);
 
-//        excelTemplate.setTypeRow(7);
+        excelTemplate.setTypeRow(7);
         excelTemplate.setDetailRow(6);
-        excelTemplate.setTitleRow(3);
-        final File templateFile = new File("E:\\data\\excel-test\\test\\模板.xlsx");
+        excelTemplate.setTitleRow(5);
+        final File templateFile = new File("C:\\Users\\Administrator\\Desktop\\模板.xlsx");
         excelTemplate.setTemplateFile(templateFile);
         final Context context = new Context(excelTemplate);
-        final File detailFile = new File("E:\\data\\excel-test\\test\\明细数据.xlsx");
+        final File detailFile = new File("C:\\Users\\Administrator\\Desktop\\明细.xlsx");
         Pair<ArrayList<String>, List<Map<String, Object>>> dataPair = ExcelUtils.readExcel(new FileInputStream(detailFile));
         context.setAllocation(Lists.newArrayList("发货时间"));
-        context.setTypeFlag(false);
-        context.setOutputPath("E:\\data\\excel-test\\test");
+        context.setTypeFlag(true);
+        context.setOutputPath("C:\\Users\\Administrator\\Desktop");
         context.setData(dataPair.getValue());
         context.setReplaceNames(ExcelUtils.getReplaceNames(new FileInputStream(templateFile)));
         outputExcel(context);
@@ -187,7 +169,6 @@ public class ExcelProcessor {
         workbookInput.close();
         outputWorkbook.close();
 
-        cacheCellStyle.clear();
         // 最后处理图片附件
 
         // 输出excel
