@@ -10,7 +10,6 @@ import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.julianjiang.javafx.model.Context;
-import org.julianjiang.javafx.model.ExcelTemplate;
 import org.julianjiang.javafx.model.ProcessType;
 import org.julianjiang.javafx.model.SheetContext;
 import org.julianjiang.javafx.utils.CellUtils;
@@ -29,6 +28,7 @@ import java.util.*;
 
 import static org.julianjiang.javafx.Constants.*;
 import static org.julianjiang.javafx.utils.ExcelUtils.extraPic;
+import static org.julianjiang.javafx.utils.ExcelUtils.extraPicV2;
 
 public class ExcelProcessor {
 
@@ -67,7 +67,7 @@ public class ExcelProcessor {
     }
 
     public static void main(String[] args) throws IOException, ScriptException, InvalidFormatException {
-        final ExcelTemplate excelTemplate = new ExcelTemplate();
+       /* final ExcelTemplate excelTemplate = new ExcelTemplate();
         excelTemplate.setPreRows(5);
         excelTemplate.setLastRows(4);
 
@@ -84,7 +84,24 @@ public class ExcelProcessor {
         context.setOutputPath("C:\\Users\\Administrator\\Desktop");
         context.setData(dataPair.getValue());
         context.setReplaceNames(ExcelUtils.getReplaceNames(new FileInputStream(templateFile)));
-        outputExcel(context);
+        outputExcel(context);*/
+
+
+        Workbook workbookInput = new XSSFWorkbook(new File("C:\\Users\\Administrator\\Desktop\\模板.xlsx"));
+        Sheet sheetInput = workbookInput.getSheetAt(0);
+        Workbook outputWorkbook = new XSSFWorkbook();
+        Sheet outputSheet = outputWorkbook.createSheet("sheetName");
+        extraPicV2(sheetInput, outputSheet, outputWorkbook);
+
+        String fileExtension = ".xlsx"; // 文件后缀
+        String filePath = Paths.get("C:\\Users\\Administrator\\Desktop", "测试输出" + fileExtension).toString();
+        // 保存输出Excel文件
+        FileOutputStream fileOut = new FileOutputStream(filePath);
+        outputWorkbook.write(fileOut);
+        fileOut.close();
+
+        workbookInput.close();
+        outputWorkbook.close();
     }
 
     public static void outputExcel(Context context) throws IOException, ScriptException, InvalidFormatException {
@@ -157,7 +174,7 @@ public class ExcelProcessor {
             // todo jcj 先1个 sheet
             setPageSize(sheetInput, outputSheet);
             outputSheet.setAutobreaks(true);
-            break;
+//            break;
         }
 
         String fileExtension = ".xlsx"; // 文件后缀

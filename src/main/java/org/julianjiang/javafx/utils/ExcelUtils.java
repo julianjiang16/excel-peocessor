@@ -60,26 +60,35 @@ public class ExcelUtils {
                 ClientAnchor anchor = picture.getClientAnchor();
                 int row = anchor.getDx1();
                 int col = anchor.getDy1();
-                addPic(outSheet, outWorkbook, picture.getPictureData().getData(), row, col);
+                addPic(outSheet, outWorkbook, picture.getPictureData().getData(), row, col, anchor);
             }
         }
     }
 
-    public static void addPic(Sheet sheet, Workbook workbook, byte[] imageBytes, int row, int col) {
-        int pictureIdx = workbook.addPicture(imageBytes, Workbook.PICTURE_TYPE_JPEG);
+    public static void addPic(Sheet sheet, Workbook workbook, byte[] imageBytes, int row, int col, ClientAnchor anchor) {
+        int pictureIdx = workbook.addPicture(imageBytes, Workbook.PICTURE_TYPE_PNG);
         CreationHelper helper = workbook.getCreationHelper();
         Drawing<?> drawing = sheet.createDrawingPatriarch();
-        ClientAnchor anchor = helper.createClientAnchor();
-        anchor.setDx1(row); // 图片起始列
-        anchor.setDy1(col); // 图片起始行
+        ClientAnchor clientAnchor = helper.createClientAnchor();
+        clientAnchor.setRow1(anchor.getRow1());
+        clientAnchor.setCol1(anchor.getCol1());
+        clientAnchor.setAnchorType(anchor.getAnchorType());
+        clientAnchor.setDx1(anchor.getDx1());
+        clientAnchor.setDy1(anchor.getDy1());
+        clientAnchor.setDx2(anchor.getDx2());
+        clientAnchor.setDy2(anchor.getDy2());
+        clientAnchor.setRow2(anchor.getRow2());
+
+        clientAnchor.setCol2(anchor.getCol2());
+
         // 插入图片
-        Picture picture = drawing.createPicture(anchor, pictureIdx);
-        picture.resize(); // 自适应图片大小
+        Picture picture = drawing.createPicture(clientAnchor, pictureIdx);
+        picture.resize(1.0); // 自适应图片大小
     }
 
     public static void extraPic(Sheet inputSheet, Sheet outSheet, Workbook outWorkbook) {
         Drawing<?> drawing = inputSheet.getDrawingPatriarch();
-        if (drawing == null){
+        if (drawing == null) {
             return;
         }
         // 遍历所有的图形对象
@@ -105,7 +114,7 @@ public class ExcelUtils {
         }
 
         keyRowCol.values().forEach(item -> {
-            addPic(outSheet, outWorkbook, item.getRight().getPictureData().getData(), item.getLeft(), item.getMiddle());
+            addPic(outSheet, outWorkbook, item.getRight().getPictureData().getData(), item.getLeft(), item.getMiddle(), null);
         });
 
     }
@@ -123,10 +132,10 @@ public class ExcelUtils {
                         break;
                     }
 
-                    if (val instanceof Double){
+                    if (val instanceof Double) {
                         final String temp = "#" + matchedString + "#";
-                        if (srcCell.getStringCellValue().equals(temp)){
-                            destCell.setCellValue((double)val);
+                        if (srcCell.getStringCellValue().equals(temp)) {
+                            destCell.setCellValue((double) val);
                             break;
                         }
                     }
