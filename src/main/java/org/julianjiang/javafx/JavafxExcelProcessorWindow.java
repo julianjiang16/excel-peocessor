@@ -59,7 +59,7 @@ public class JavafxExcelProcessorWindow extends Application {
         HBox outputFBox = outputFileChooserFactory.buildFileChooser(primaryStage, null, context, true);
 
 
-        Label radioLabel = new Label("是否需要分类汇总（一级分类）：");
+        Label radioLabel = new Label("是否需要分类汇总（类别）：");
         RadioComponent radioComponent = new RadioComponent(font, radioLabel, stringTemplate);
         HBox radioBox = radioComponent.buildRadio(context);
 

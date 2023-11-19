@@ -5,22 +5,15 @@ import javafx.application.Platform;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.control.Alert;
-import javafx.scene.control.Button;
-import javafx.scene.control.ListView;
-import javafx.scene.control.MultipleSelectionModel;
-import javafx.scene.control.TextField;
+import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.math3.util.Pair;
-import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.julianjiang.javafx.model.Context;
 import org.julianjiang.javafx.processor.ExcelProcessor;
 
-import javax.script.ScriptException;
-import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -75,7 +68,7 @@ public class ButtonComponent {
                                 }
                             });
                             Platform.runLater(() -> AlertComponent.buildAlert("成功", "文件生成成功！！！").show());
-                        } catch (IOException | ScriptException | InvalidFormatException e) {
+                        } catch (Exception e) {
                             e.printStackTrace();
                             Platform.runLater(() -> AlertComponent.buildAlert("错误", "文件生成失败！！！").show());
                         } finally {

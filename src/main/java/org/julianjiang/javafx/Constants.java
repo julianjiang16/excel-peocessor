@@ -2,7 +2,7 @@ package org.julianjiang.javafx;
 
 public class Constants {
 
-    public static final String TYPE_COLUMN_NAME = "一级分类";
+    public static final String TYPE_COLUMN_NAME = "类别";
 
     public static final String SERIAL_NUM_COLUMN_NAME = "序号";
 
@@ -20,11 +20,12 @@ public class Constants {
 
     public static final String CNT_REPLACE = "#数量总计#";
 
-
     public static final String SUM_SUFFIX = "总计";
 
     public static final String TYPE_SUFFIX = "汇总";
 
     public static final String FORMULA_SUFFIX = "公式";
+
+    public static final String SHEET_NAME_SPLIT = "_";
 
 }

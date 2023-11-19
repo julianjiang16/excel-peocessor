@@ -10,12 +10,10 @@ import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.julianjiang.javafx.model.Context;
+import org.julianjiang.javafx.model.ExcelTemplate;
 import org.julianjiang.javafx.model.ProcessType;
 import org.julianjiang.javafx.model.SheetContext;
-import org.julianjiang.javafx.utils.CellUtils;
-import org.julianjiang.javafx.utils.ExcelUtils;
-import org.julianjiang.javafx.utils.FormulaUtils;
-import org.julianjiang.javafx.utils.SimpleDateThreadLocal;
+import org.julianjiang.javafx.utils.*;
 
 import javax.script.ScriptException;
 import java.io.File;
@@ -25,10 +23,10 @@ import java.io.IOException;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static org.julianjiang.javafx.Constants.*;
 import static org.julianjiang.javafx.utils.ExcelUtils.extraPic;
-import static org.julianjiang.javafx.utils.ExcelUtils.extraPicV2;
 
 public class ExcelProcessor {
 
@@ -67,7 +65,7 @@ public class ExcelProcessor {
     }
 
     public static void main(String[] args) throws IOException, ScriptException, InvalidFormatException {
-       /* final ExcelTemplate excelTemplate = new ExcelTemplate();
+        final ExcelTemplate excelTemplate = new ExcelTemplate();
         excelTemplate.setPreRows(5);
         excelTemplate.setLastRows(4);
 
@@ -77,17 +75,17 @@ public class ExcelProcessor {
         final File templateFile = new File("C:\\Users\\Administrator\\Desktop\\模板.xlsx");
         excelTemplate.setTemplateFile(templateFile);
         final Context context = new Context(excelTemplate);
-        final File detailFile = new File("C:\\Users\\Administrator\\Desktop\\明细.xlsx");
+        final File detailFile = new File("C:\\Users\\Administrator\\Desktop\\明细1.xlsx");
         Pair<ArrayList<String>, List<Map<String, Object>>> dataPair = ExcelUtils.readExcel(new FileInputStream(detailFile));
         context.setAllocation(Lists.newArrayList("发货时间"));
         context.setTypeFlag(true);
         context.setOutputPath("C:\\Users\\Administrator\\Desktop");
         context.setData(dataPair.getValue());
         context.setReplaceNames(ExcelUtils.getReplaceNames(new FileInputStream(templateFile)));
-        outputExcel(context);*/
+        outputExcel(context);
 
 
-        Workbook workbookInput = new XSSFWorkbook(new File("C:\\Users\\Administrator\\Desktop\\模板.xlsx"));
+      /*  Workbook workbookInput = new XSSFWorkbook(new File("C:\\Users\\Administrator\\Desktop\\模板.xlsx"));
         Sheet sheetInput = workbookInput.getSheetAt(0);
         Workbook outputWorkbook = new XSSFWorkbook();
         Sheet outputSheet = outputWorkbook.createSheet("sheetName");
@@ -101,7 +99,7 @@ public class ExcelProcessor {
         fileOut.close();
 
         workbookInput.close();
-        outputWorkbook.close();
+        outputWorkbook.close();*/
     }
 
     public static void outputExcel(Context context) throws IOException, ScriptException, InvalidFormatException {
@@ -113,8 +111,10 @@ public class ExcelProcessor {
         final List<Object> titleNames = ExcelUtils.extraHeader(sheetInput, context.getExcelTemplate().getTitleRow());
         // 分单数据 每个sheet页数据
         final Map<String, List<Map<String, Object>>> allocationDataMap = groupDataByAllocation(context.getData(), context.getAllocation());
+
+        final List<Map.Entry<String, List<Map<String, Object>>>> allocationDataList = sortByKey(allocationDataMap);
         Row rowInput = sheetInput.getRow(context.getExcelTemplate().getDetailRow() - 1);
-        for (Map.Entry<String, List<Map<String, Object>>> allocationData : allocationDataMap.entrySet()) {
+        for (Map.Entry<String, List<Map<String, Object>>> allocationData : allocationDataList) {
 
             final SheetContext sheetContext = new SheetContext();
             // 处理普通替换字段
@@ -506,7 +506,7 @@ public class ExcelProcessor {
                 tempStr.add((String) item.get(allocationField));
             }
 
-            final String allocationKey = String.join("-", tempStr);
+            final String allocationKey = String.join(SHEET_NAME_SPLIT, tempStr);
 
             // 根据分类键将数据放入对应的列表中
             List<Map<String, Object>> group = groupedData.getOrDefault(allocationKey, new ArrayList<>());
@@ -514,8 +514,14 @@ public class ExcelProcessor {
             groupedData.put(allocationKey, group);
             tempStr.clear();
         }
+
         // 将分类结果转换为列表形式
         return groupedData;
+    }
+
+    public static List<Map.Entry<String, List<Map<String, Object>>>> sortByKey(Map<String, List<Map<String, Object>>> data){
+        List<Map.Entry<String, List<Map<String, Object>>>> result = data.entrySet().stream().sorted(Map.Entry.comparingByKey(new CustomKeyComparator())).collect(Collectors.toList());
+        return result;
     }
 
 

@@ -114,7 +114,7 @@ public class ExcelUtils {
         }
 
         keyRowCol.values().forEach(item -> {
-            addPic(outSheet, outWorkbook, item.getRight().getPictureData().getData(), item.getLeft(), item.getMiddle(), null);
+            addPic(outSheet, outWorkbook, item.getRight().getPictureData().getData(), item.getLeft(), item.getMiddle(), item.getRight().getClientAnchor());
         });
 
     }

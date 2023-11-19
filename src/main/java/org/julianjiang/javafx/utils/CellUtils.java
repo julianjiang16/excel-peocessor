@@ -12,14 +12,14 @@ public class CellUtils {
 
         if (value instanceof Double || value instanceof Float) {
             cell.setCellValue((Double) value);
-            cellStyle.setDataFormat(creationHelper.createDataFormat().getFormat("@"));
+//            cellStyle.setDataFormat(creationHelper.createDataFormat().getFormat("@"));
         } else if (value instanceof String) {
             cell.setCellValue((String) value);
         } else if (value instanceof Boolean) {
             cell.setCellValue((Boolean) value);
         } else if (value instanceof Date) {
             cell.setCellValue((Date) value);
-            cellStyle.setDataFormat(creationHelper.createDataFormat().getFormat("yyyy-MM-dd"));
+//            cellStyle.setDataFormat(creationHelper.createDataFormat().getFormat("yyyy-MM-dd"));
             cell.setCellStyle(cellStyle);
         } else {
             cell.setCellValue(value.toString());
