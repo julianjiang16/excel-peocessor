@@ -22,6 +22,8 @@ public class Context {
 
     boolean typeFlag;
 
+    boolean footFlag;
+
     @Deprecated
     File templateFile;
 

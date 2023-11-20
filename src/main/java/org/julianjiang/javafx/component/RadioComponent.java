@@ -22,7 +22,7 @@ public class RadioComponent {
         this.label.setPrefWidth(300);
     }
 
-    public HBox buildRadio(Context context) {
+    public HBox buildRadio(Context context, boolean footer) {
 
         HBox hBox = new HBox();
         hBox.setPadding(new Insets(30, 0, 0, 20)); // 设置左边距
@@ -43,9 +43,17 @@ public class RadioComponent {
         toggleGroup.selectedToggleProperty().addListener((observable, oldValue, newValue) -> {
             if (newValue != null && StringUtils.isNotBlank(newValue.toString())) {
                 if (newValue.toString().indexOf("是") > -1) {
-                    context.setTypeFlag(true);
+                    if (footer) {
+                        context.setFootFlag(true);
+                    } else {
+                        context.setTypeFlag(true);
+                    }
                 } else {
-                    context.setTypeFlag(false);
+                    if (footer) {
+                        context.setFootFlag(false);
+                    } else {
+                        context.setTypeFlag(false);
+                    }
                 }
             }
         });

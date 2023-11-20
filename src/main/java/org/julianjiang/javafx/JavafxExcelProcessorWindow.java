@@ -35,7 +35,7 @@ public class JavafxExcelProcessorWindow extends Application {
 
         // 计算百分比大小
         double width = bounds.getWidth() * 0.43; // 宽度为屏幕宽度的80%
-        double height = bounds.getHeight() * 0.6; // 高度为屏幕高度的60%
+        double height = bounds.getHeight() * 0.7; // 高度为屏幕高度的60%
 
 
         Label typeLabel = new Label("请选择分单条件：");
@@ -61,7 +61,13 @@ public class JavafxExcelProcessorWindow extends Application {
 
         Label radioLabel = new Label("是否需要分类汇总（类别）：");
         RadioComponent radioComponent = new RadioComponent(font, radioLabel, stringTemplate);
-        HBox radioBox = radioComponent.buildRadio(context);
+        HBox radioBox = radioComponent.buildRadio(context, false);
+
+
+        Label footLabel = new Label("是否需要页脚：");
+        RadioComponent footRadioComponent = new RadioComponent(font, footLabel, stringTemplate);
+        HBox footRadioBox = footRadioComponent.buildRadio(context, true);
+
 
         InputComponent inputComponent = new InputComponent(font);
         VBox noticeBox = inputComponent.buildInput(context);
@@ -73,7 +79,7 @@ public class JavafxExcelProcessorWindow extends Application {
         // 创建垂直布局
         VBox vbox = new VBox(10);
         // 主屏幕
-        vbox.getChildren().addAll(hboxFile, typeComboBox, templateBox, outputFBox, radioBox, noticeBox);
+        vbox.getChildren().addAll(hboxFile, typeComboBox, templateBox, outputFBox, radioBox, footRadioBox, noticeBox);
 
         // 将垂直布局放置在主界面的中心
         root.setCenter(vbox);

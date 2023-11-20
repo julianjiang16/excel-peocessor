@@ -44,7 +44,6 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 import static org.julianjiang.javafx.Constants.FORMULA_SUFFIX;
-import static org.julianjiang.javafx.Constants.MAX_ROW_PRE_SHEET;
 import static org.julianjiang.javafx.Constants.SERIAL_NUM_COLUMN_NAME;
 import static org.julianjiang.javafx.Constants.SHEET_NAME_SPLIT;
 import static org.julianjiang.javafx.Constants.SUM_SUFFIX;
@@ -103,6 +102,7 @@ public class ExcelProcessor {
         Pair<ArrayList<String>, List<Map<String, Object>>> dataPair = ExcelUtils.readExcel(new FileInputStream(detailFile));
         context.setAllocation(Lists.newArrayList("发货时间"));
         context.setTypeFlag(false);
+        context.setFootFlag(true);
         context.setOutputPath("E:\\data\\excel-test");
         context.setData(dataPair.getValue());
         context.setReplaceNames(ExcelUtils.getReplaceNames(new FileInputStream(templateFile)));
@@ -207,8 +207,10 @@ public class ExcelProcessor {
 
             setPageSize(sheetInput, outputSheet);
             // 页脚
-            final Footer footer = outputSheet.getFooter();
-            footer.setCenter("第 " + HSSFFooter.page() + " 页 / 共 " + getTotalPages(outputSheet.getLastRowNum(), MAX_ROW_PRE_SHEET) + " 页");
+            if (context.isFootFlag()) {
+                final Footer footer = outputSheet.getFooter();
+                footer.setCenter("第 " + HSSFFooter.page() + " 页 / 共 " + HSSFFooter.numPages() + " 页");
+            }
             outputSheet.setAutobreaks(true);
 
             // 页头
