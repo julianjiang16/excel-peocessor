@@ -28,4 +28,6 @@ public class Constants {
 
     public static final String SHEET_NAME_SPLIT = "_";
 
+    public static final int MAX_ROW_PRE_SHEET = 50;
+
 }

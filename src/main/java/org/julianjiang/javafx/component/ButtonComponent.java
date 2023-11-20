@@ -70,7 +70,7 @@ public class ButtonComponent {
                             Platform.runLater(() -> AlertComponent.buildAlert("成功", "文件生成成功！！！").show());
                         } catch (Exception e) {
                             e.printStackTrace();
-                            Platform.runLater(() -> AlertComponent.buildAlert("错误", "文件生成失败！！！").show());
+                            Platform.runLater(() -> AlertComponent.buildAlert("错误", "文件生成失败！错误信息：" + e.getMessage()).show());
                         } finally {
                             cacheCellStyle.clear();
                         }

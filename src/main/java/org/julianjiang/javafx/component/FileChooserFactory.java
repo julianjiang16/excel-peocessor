@@ -1,5 +1,6 @@
 package org.julianjiang.javafx.component;
 
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
@@ -99,8 +100,11 @@ public class FileChooserFactory {
                     context.getExcelTemplate().setTemplateFile(selectedFile);
                 }
                 textField.setText(selectedFile.getName());
+            } catch (IllegalStateException ise) {
+                Platform.runLater(() -> AlertComponent.buildAlert("错误", "选择的文件中，数字列存在非数字字符，请检查后重试！").show());
             } catch (Exception ex) {
                 ex.printStackTrace();
+                Platform.runLater(() -> AlertComponent.buildAlert("错误", "未知错误，错误信息：" + ex.getMessage()).show());
             } finally {
                 if (inputStream != null) {
                     try {

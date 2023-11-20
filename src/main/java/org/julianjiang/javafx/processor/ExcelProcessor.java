@@ -5,15 +5,29 @@ import com.google.common.collect.Maps;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.math3.util.Pair;
+import org.apache.poi.hssf.usermodel.HSSFFooter;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
-import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.ss.usermodel.DateUtil;
+import org.apache.poi.ss.usermodel.Footer;
+import org.apache.poi.ss.usermodel.PageMargin;
+import org.apache.poi.ss.usermodel.PrintSetup;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.julianjiang.javafx.model.Context;
 import org.julianjiang.javafx.model.ExcelTemplate;
 import org.julianjiang.javafx.model.ProcessType;
 import org.julianjiang.javafx.model.SheetContext;
-import org.julianjiang.javafx.utils.*;
+import org.julianjiang.javafx.utils.CellUtils;
+import org.julianjiang.javafx.utils.CustomKeyComparator;
+import org.julianjiang.javafx.utils.ExcelUtils;
+import org.julianjiang.javafx.utils.FormulaUtils;
+import org.julianjiang.javafx.utils.SimpleDateThreadLocal;
 
 import javax.script.ScriptException;
 import java.io.File;
@@ -22,10 +36,20 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
-import static org.julianjiang.javafx.Constants.*;
+import static org.julianjiang.javafx.Constants.FORMULA_SUFFIX;
+import static org.julianjiang.javafx.Constants.MAX_ROW_PRE_SHEET;
+import static org.julianjiang.javafx.Constants.SERIAL_NUM_COLUMN_NAME;
+import static org.julianjiang.javafx.Constants.SHEET_NAME_SPLIT;
+import static org.julianjiang.javafx.Constants.SUM_SUFFIX;
+import static org.julianjiang.javafx.Constants.TYPE_COLUMN_NAME;
+import static org.julianjiang.javafx.Constants.TYPE_SUFFIX;
 import static org.julianjiang.javafx.utils.ExcelUtils.extraPic;
 
 public class ExcelProcessor {
@@ -66,23 +90,29 @@ public class ExcelProcessor {
 
     public static void main(String[] args) throws IOException, ScriptException, InvalidFormatException {
         final ExcelTemplate excelTemplate = new ExcelTemplate();
-        excelTemplate.setPreRows(5);
+        excelTemplate.setPreRows(3);
         excelTemplate.setLastRows(4);
 
-        excelTemplate.setTitleRow(5);
-        excelTemplate.setTypeRow(7);
-        excelTemplate.setDetailRow(6);
-        final File templateFile = new File("C:\\Users\\Administrator\\Desktop\\模板.xlsx");
+        excelTemplate.setTitleRow(3);
+        excelTemplate.setTypeRow(8);
+        excelTemplate.setDetailRow(4);
+        final File templateFile = new File("E:\\data\\excel-test\\工作簿1.xlsx");
         excelTemplate.setTemplateFile(templateFile);
         final Context context = new Context(excelTemplate);
-        final File detailFile = new File("C:\\Users\\Administrator\\Desktop\\明细1.xlsx");
+        final File detailFile = new File("E:\\data\\excel-test\\工作簿2.xlsx");
         Pair<ArrayList<String>, List<Map<String, Object>>> dataPair = ExcelUtils.readExcel(new FileInputStream(detailFile));
         context.setAllocation(Lists.newArrayList("发货时间"));
-        context.setTypeFlag(true);
-        context.setOutputPath("C:\\Users\\Administrator\\Desktop");
+        context.setTypeFlag(false);
+        context.setOutputPath("E:\\data\\excel-test");
         context.setData(dataPair.getValue());
         context.setReplaceNames(ExcelUtils.getReplaceNames(new FileInputStream(templateFile)));
-        outputExcel(context);
+        try {
+            outputExcel(context);
+        } catch (Exception e) {
+            System.err.println(e.getMessage());
+            e.printStackTrace();
+        }
+
 
 
       /*  Workbook workbookInput = new XSSFWorkbook(new File("C:\\Users\\Administrator\\Desktop\\模板.xlsx"));
@@ -123,9 +153,11 @@ public class ExcelProcessor {
             // 需要重新创建sheet页
             final String sheetName = allocationData.getKey();
             Sheet outputSheet = outputWorkbook.createSheet(sheetName);
+            // 页头必须
             copyTemplateHeader(sheetInput, outputSheet, context, workbookInput, outputWorkbook, sheetContext);
             // 分类数据
             Map<String, List<Map<String, Object>>> typeDataMap = groupDataByAllocation(allocationData.getValue(), Lists.newArrayList(TYPE_COLUMN_NAME));
+
             if (!context.isTypeFlag()) {
                 // 不是分类则构造新的sheet页数据
                 typeDataMap = Maps.newHashMap();
@@ -167,14 +199,21 @@ public class ExcelProcessor {
             // 处理总计
             handleSpecificField(context.getReplaceNames(), sheetContext, allocationData.getValue(), ProcessType.SUM);
             handleSpecificField(context.getReplaceNames(), sheetContext, allocationData.getValue(), ProcessType.FORMULA);
+
+            // 页尾打印在最后一张
             copyTemplateBottom(sheetInput, outputSheet, context, workbookInput, outputWorkbook, sheetContext);
             // 处理单sheet 图片
             extraPic(sheetInput, outputSheet, outputWorkbook);
 
-            // todo jcj 先1个 sheet
             setPageSize(sheetInput, outputSheet);
+            // 页脚
+            final Footer footer = outputSheet.getFooter();
+            footer.setCenter("第 " + HSSFFooter.page() + " 页 / 共 " + getTotalPages(outputSheet.getLastRowNum(), MAX_ROW_PRE_SHEET) + " 页");
             outputSheet.setAutobreaks(true);
-//            break;
+
+            // 页头
+            final CellRangeAddress range = new CellRangeAddress(0, context.getExcelTemplate().getPreRows() - 1, 0, 0);
+            outputSheet.setRepeatingRows(range);
         }
 
         String fileExtension = ".xlsx"; // 文件后缀
@@ -206,6 +245,10 @@ public class ExcelProcessor {
         if (alert.isShowing()) {
             alert.close();
         }*/
+    }
+
+    public static int getTotalPages(int dataRowCount, int maxRowCountPerPage) {
+        return (dataRowCount - 1) / maxRowCountPerPage + 1; // 数据行数至少为1，所以要减去1再进行除法操作
     }
 
     public static void handleSpecificField(List<String> replaceNames, SheetContext sheetContext, List<Map<String, Object>> data, ProcessType type) throws ScriptException {
@@ -278,9 +321,10 @@ public class ExcelProcessor {
         destPrintSetup.setFooterMargin(srcPrintSetup.getFooterMargin());
         destPrintSetup.setCopies(srcPrintSetup.getCopies());
         destPrintSetup.setScale(srcPrintSetup.getScale());
-        destPrintSetup.setPageStart(srcPrintSetup.getPageStart());
         destPrintSetup.setValidSettings(srcPrintSetup.getValidSettings());
         destPrintSetup.setLeftToRight(srcPrintSetup.getLeftToRight());
+        destPrintSetup.setPageStart((short) 1);
+        destPrintSetup.setUsePage(true);
 
         targetSheet.setMargin(PageMargin.BOTTOM, sourceSheet.getMargin(PageMargin.BOTTOM));
         targetSheet.setMargin(PageMargin.LEFT, sourceSheet.getMargin(PageMargin.LEFT));
@@ -337,7 +381,6 @@ public class ExcelProcessor {
         for (int i = 0; i < context.getExcelTemplate().getLastRows(); i++, startRow++) {
             Row rowInput = sheetInput.getRow(startRow);
             Row rowOutput = outputSheet.createRow(outputSheet.getLastRowNum() + 1);
-            rowOutput.setRowStyle(rowInput.getRowStyle());
             for (int j = 0; j < rowInput.getLastCellNum(); j++) { // 遍历每一列
                 Cell cellInput = rowInput.getCell(j);
                 Cell cellOutput = rowOutput.createCell(j);
@@ -519,7 +562,7 @@ public class ExcelProcessor {
         return groupedData;
     }
 
-    public static List<Map.Entry<String, List<Map<String, Object>>>> sortByKey(Map<String, List<Map<String, Object>>> data){
+    public static List<Map.Entry<String, List<Map<String, Object>>>> sortByKey(Map<String, List<Map<String, Object>>> data) {
         List<Map.Entry<String, List<Map<String, Object>>>> result = data.entrySet().stream().sorted(Map.Entry.comparingByKey(new CustomKeyComparator())).collect(Collectors.toList());
         return result;
     }
