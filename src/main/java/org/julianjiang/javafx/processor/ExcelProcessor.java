@@ -90,20 +90,22 @@ public class ExcelProcessor {
     public static void main(String[] args) throws IOException, ScriptException, InvalidFormatException {
         final ExcelTemplate excelTemplate = new ExcelTemplate();
         excelTemplate.setPreRows(3);
-        excelTemplate.setLastRows(4);
+        excelTemplate.setLastRows(1);
 
         excelTemplate.setTitleRow(3);
-        excelTemplate.setTypeRow(8);
+        excelTemplate.setTypeRow(55);
         excelTemplate.setDetailRow(4);
-        final File templateFile = new File("E:\\data\\excel-test\\工作簿1.xlsx");
+
+        String parentPath = "E:\\data\\excel-test\\test\\";
+        final File templateFile = new File(parentPath + "采购订单.xlsx");
         excelTemplate.setTemplateFile(templateFile);
         final Context context = new Context(excelTemplate);
-        final File detailFile = new File("E:\\data\\excel-test\\工作簿2.xlsx");
+        final File detailFile = new File(parentPath + "田坎23_12_08-11_57_08.xlsx");
         Pair<ArrayList<String>, List<Map<String, Object>>> dataPair = ExcelUtils.readExcel(new FileInputStream(detailFile));
-        context.setAllocation(Lists.newArrayList("发货时间"));
+        context.setAllocation(Lists.newArrayList("单据日期"));
         context.setTypeFlag(false);
         context.setFootFlag(true);
-        context.setOutputPath("E:\\data\\excel-test");
+        context.setOutputPath(parentPath);
         context.setData(dataPair.getValue());
         context.setReplaceNames(ExcelUtils.getReplaceNames(new FileInputStream(templateFile)));
         try {
@@ -187,6 +189,7 @@ public class ExcelProcessor {
                         }
                         setCellWidth(sheetInput, outputSheet, i);
                     }
+                    rowOutput.setHeight(rowInput.getHeight());
                 }
                 // 汇总行
                 if (context.isTypeFlag()) {
@@ -351,6 +354,7 @@ public class ExcelProcessor {
                 setCellWidth(sheetInput, outputSheet, j);
             }
         }
+        typeRowOutput.setHeight(typeRow.getHeight());
     }
 
     private static void copyTemplateHeader(Sheet sheetInput, Sheet outputSheet, Context context, Workbook workbookInput, Workbook outputWorkbook, SheetContext sheetContext) {
@@ -367,6 +371,7 @@ public class ExcelProcessor {
                     cellOutput.setCellStyle(ExcelUtils.getCopyCellStyle(cellInput.getCellStyle(), workbookInput, outputWorkbook, true));
                 }
             }
+            rowOutput.setHeight(rowInput.getHeight());
         }
         ExcelUtils.copyMergedCellStyles(sheetInput, outputSheet, 0, index, context.getExcelTemplate().getPreRows());
     }
@@ -392,6 +397,7 @@ public class ExcelProcessor {
                     setCellWidth(sheetInput, outputSheet, j);
                 }
             }
+            rowOutput.setHeight(rowInput.getHeight());
         }
 
     }
