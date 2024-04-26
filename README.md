@@ -1,4 +1,6 @@
-# excel-peocessor
+# excel-peocessor  
+分单工具
+使用Launch4j 将jar打包成exe文件。 jre使用jdk1.8
 
 
 
